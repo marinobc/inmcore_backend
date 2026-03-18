@@ -4,7 +4,7 @@ Este repositorio contiene el backend del proyecto TD Inmobiliaria, implementado 
 
 ## Estructura del Proyecto
 
-El backend está compuesto por **5 microservicios principales** y utilidades de soporte:
+El backend está compuesto por **6 microservicios principales** y utilidades de soporte:
 
 ```
 Backend/
@@ -13,6 +13,7 @@ Backend/
 ├── identity-service        # Servicio de autenticación y generación de tokens
 ├── notification-service    # Servicio de notificaciones por email
 ├── service-registry        # Servicio de descubrimiento Eureka
+├── user-service            # Servicio de gestión de información de personas/usuarios
 ├── Utils/                  # Utilidades y scripts de soporte
 │   ├── mongo bd.md         # Contiene el comando para instalar MongoDB
 │   ├── MongoDB Semilla.py  # Script para sembrar datos iniciales
@@ -76,6 +77,18 @@ git commit -m "feat(notification): implementar servicio de notificaciones para e
 - Envío de credenciales temporales a nuevos agentes
 - Notificaciones por email
 - Templates de correo electrónico
+### 6. **user-service** (Puerto: 8084)
+**Servicio de Usuarios** - Gestión de Datos de Personas
+
+```bash
+git commit -m "feat(user-service): implementar servicio de gestión de perfiles de personas (Admin, Empleado, Propietario, Cliente)"
+```
+
+**Función:**
+- Gestión de perfiles de personas: Administradores, Empleados, Propietarios y Clientes Interesados.
+- Registro y actualización de información personal.
+- Asociación de usuarios con sus IDs de autenticación del `identity-service`.
+- Consulta de perfiles por tipo o ID.
 
 ## Tecnologías Utilizadas
 
@@ -166,6 +179,10 @@ mvn clean spring-boot:run
 # 5. Notification Service
 cd ../notification-service
 mvn clean spring-boot:run
+
+# 6. User Service
+cd ../user-service
+mvn clean spring-boot:run
 ```
 
 ### Opción 2: Usar el lanzador automático (requiere Python)
@@ -186,6 +203,7 @@ Este script iniciará todos los servicios en el orden correcto automáticamente.
 | identity-service | 8081 | http://localhost:8081 | Autenticación |
 | access-control-service | 8082 | http://localhost:8082 | Roles y permisos |
 | notification-service | 8083 | http://localhost:8083 | Notificaciones |
+| user-service | 8084 | http://localhost:8084 | Gestión de usuarios |
 
 ## Extensiones Recomendadas para VS Code
 
