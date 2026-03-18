@@ -19,6 +19,7 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
     // Endpoints that do not require authentication
     private static final List<String> OPEN_ENDPOINTS = List.of(
             "/auth/login",
+            "/auth/logout",
             "/auth/refresh",
             "/auth/forgot-password",
             "/auth/reset-password",
