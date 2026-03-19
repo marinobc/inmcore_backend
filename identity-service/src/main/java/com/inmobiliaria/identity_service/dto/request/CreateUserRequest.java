@@ -14,6 +14,8 @@ public record CreateUserRequest(
         @Email @NotBlank String email,
         @NotNull UserType userType,
         @NotEmpty List<String> roleIds,
+        @NotNull java.time.LocalDate birthDate,
+        @NotBlank String phone,
         Boolean sendTemporaryCredentials
 ) {
 }

@@ -174,6 +174,20 @@ public class PersonService {
         return mapToResponse(personRepository.save(person));
     }
 
+    public void deleteById(String id) {
+        if (!personRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Person not found with id: " + id);
+        }
+        personRepository.deleteById(id);
+    }
+
+    public void deleteByAuthUserId(String authUserId) {
+        if (!personRepository.existsByAuthUserId(authUserId)) {
+            throw new ResourceNotFoundException("Person not found with authUserId: " + authUserId);
+        }
+        personRepository.deleteByAuthUserId(authUserId);
+    }
+
     private PersonResponse mapToResponse(PersonDocument document) {
         String dept = null, pos = null, tax = null, contact = null, budget = null;
         Instant hire = null;

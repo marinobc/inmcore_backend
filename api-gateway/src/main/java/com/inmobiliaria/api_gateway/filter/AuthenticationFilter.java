@@ -51,12 +51,17 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                 try {
                     jwtUtil.validateToken(authHeader);
                     Claims claims = jwtUtil.getClaims(authHeader);
+
+                    Object rolesObj = claims.get("roles");
+                    String rolesString = "";
+                    if (rolesObj instanceof List<?> rolesList) {
+                        rolesString = String.join(",", rolesList.stream().map(Object::toString).toList());
+                    }
                     
-                    // Inject user details into the headers for backend services to consume safely
                     exchange = exchange.mutate().request(
                         exchange.getRequest().mutate()
                             .header("X-Auth-User-Id", claims.getSubject())
-                            .header("X-Auth-Roles", String.valueOf(claims.get("roles")))
+                            .header("X-Auth-Roles", rolesString) // Clean string: "ADMIN,AGENT"
                             .build()
                     ).build();
                 } catch (Exception e) {

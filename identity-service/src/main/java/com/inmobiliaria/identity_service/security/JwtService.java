@@ -26,11 +26,12 @@ public class JwtService {
         Instant expiration = now.plusSeconds(jwtProperties.accessTokenExpirationSeconds());
 
         return Jwts.builder()
-                .subject(principal.userId())
+                .setSubject(principal.userId())
                 .claim("roles", principal.roleIds())
+                .claim("userType", principal.userType())
                 .claim("status", principal.status())
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(expiration))
+                .setIssuedAt(Date.from(now))
+                .setExpiration(Date.from(expiration))
                 .signWith(secretKey)
                 .compact();
     }

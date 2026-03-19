@@ -76,4 +76,16 @@ public class PersonController {
             @RequestParam(defaultValue = "false") boolean isCustom) {
         return personService.assignRoles(id, roleIds, isCustom);
     }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable String id) {
+        personService.deleteById(id);
+    }
+
+    @DeleteMapping("/by-auth/{authUserId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteByAuthUserId(@PathVariable String authUserId) {
+        personService.deleteByAuthUserId(authUserId);
+    }
 }

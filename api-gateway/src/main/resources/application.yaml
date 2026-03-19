@@ -14,13 +14,13 @@ spring:
         - id: identity-service
           uri: lb://IDENTITY-SERVICE
           predicates:
-            - Path=/auth/**, /users/**
+            - Path=/auth/**,/users/**,/users
           filters:
             - AuthenticationFilter
         - id: access-control-service
           uri: lb://ACCESS-CONTROL-SERVICE
           predicates:
-            - Path=/roles/**, /permissions/**
+            - Path=/roles/**,/permissions/**,/roles,/permissions
           filters:
             - AuthenticationFilter
         - id: notification-service

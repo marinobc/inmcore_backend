@@ -13,4 +13,5 @@ public interface PersonRepository extends MongoRepository<PersonDocument, String
     Optional<PersonDocument> findByAuthUserId(String authUserId);
     List<PersonDocument> findByPersonType(PersonType personType);
     boolean existsByAuthUserId(String authUserId);
+    void deleteByAuthUserId(String authUserId);
 }

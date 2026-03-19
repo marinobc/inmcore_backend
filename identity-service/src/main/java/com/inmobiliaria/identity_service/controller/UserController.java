@@ -43,4 +43,17 @@ public class UserController {
     public UserResponse assignRole(@PathVariable String id, @Valid @RequestBody AssignRoleRequest request) {
         return userService.assignRole(id, request);
     }
+
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public UserResponse update(@PathVariable String id, @Valid @RequestBody com.inmobiliaria.identity_service.dto.request.UpdateUserRequest request) {
+        return userService.update(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
+    public void delete(@PathVariable String id) {
+        userService.delete(id);
+    }
 }

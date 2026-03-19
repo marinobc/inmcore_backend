@@ -31,6 +31,19 @@ public class RoleController {
         return roleService.findById(id);
     }
 
+    @GetMapping("/validate")
+    public boolean validateRoleIds(@RequestParam List<String> ids) {
+        // Basic logic: check if all requested IDs exist in the DB
+        return ids.stream().allMatch(id -> {
+            try {
+                roleService.findById(id);
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        });
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")

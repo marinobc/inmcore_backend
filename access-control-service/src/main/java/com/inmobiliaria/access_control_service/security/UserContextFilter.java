@@ -25,12 +25,9 @@ public class UserContextFilter extends OncePerRequestFilter {
         String userId = request.getHeader("X-Auth-User-Id");
         String rolesHeader = request.getHeader("X-Auth-Roles");
 
-        if (userId != null && rolesHeader != null) {
-            
-            // rolesHeader will likely come as "[ADMIN, AGENT]" from API Gateway since it's a list toString()
-            String cleanRoles = rolesHeader.replace("[", "").replace("]", "").replace(" ", "");
-            
-            List<SimpleGrantedAuthority> authorities = Arrays.stream(cleanRoles.split(","))
+        if (userId != null && rolesHeader != null && !rolesHeader.isBlank()) {
+            List<SimpleGrantedAuthority> authorities = Arrays.stream(rolesHeader.split(","))
+                    .map(String::trim)
                     .filter(role -> !role.isEmpty())
                     .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                     .collect(Collectors.toList());
