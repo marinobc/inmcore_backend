@@ -13,17 +13,23 @@ public record CreatePersonRequest(
         @NotBlank String authUserId,
         @NotBlank String firstName,
         @NotBlank String lastName,
-        @NotNull LocalDate birthDate,
+        @NotNull  LocalDate birthDate,
         @NotBlank String phone,
         @NotBlank @Email String email,
-        @NotNull PersonType personType,
+        @NotNull  PersonType personType,
         List<String> roleIds,
-        
-        // Optional type-specific fields
+
+        // Employee-specific
         String department,
         String position,
         Instant hireDate,
+
+        // Owner-specific
         String taxId,
+        String address,
+        List<String> propertyIds,
+
+        // InterestedClient-specific
         String preferredContactMethod,
         String budget
 ) {}

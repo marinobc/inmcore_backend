@@ -21,11 +21,15 @@ public class EmployeeProfileService {
                 request.phone(),
                 request.email(),
                 PersonType.EMPLOYEE,
-                null, // roles handled separately
+                null,               // roleIds
                 request.department(),
                 request.position(),
                 request.hireDate(),
-                null, null, null
+                null,               // taxId
+                null,               // address
+                null,               // propertyIds
+                null,               // preferredContactMethod
+                null                // budget
         );
         return personService.create(genericRequest);
     }

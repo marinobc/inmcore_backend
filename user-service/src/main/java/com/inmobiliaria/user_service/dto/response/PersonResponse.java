@@ -17,12 +17,18 @@ public record PersonResponse(
         PersonType personType,
         List<String> roleIds,
         boolean customRole,
-        
-        // Type-specific (optional)
+
+        // Employee-specific
         String department,
         String position,
         Instant hireDate,
+
+        // Owner-specific
         String taxId,
+        String address,
+        List<String> propertyIds,
+
+        // InterestedClient-specific
         String preferredContactMethod,
         String budget
 ) {}

@@ -21,10 +21,12 @@ public class OwnerProfileService {
                 request.phone(),
                 request.email(),
                 PersonType.OWNER,
-                null, 
-                null, null, null,
+                null,
+                null, null, null,   // employee fields
                 request.taxId(),
-                null, null
+                request.address(),
+                request.propertyIds(),
+                null, null              // client fields
         );
         return personService.create(genericRequest);
     }

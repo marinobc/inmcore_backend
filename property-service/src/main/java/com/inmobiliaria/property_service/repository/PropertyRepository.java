@@ -1,3 +1,5 @@
+package com.inmobiliaria.property_service.repository;
+
 import com.inmobiliaria.property_service.domain.PropertyDocument;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;

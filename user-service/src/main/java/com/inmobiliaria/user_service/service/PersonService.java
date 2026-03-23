@@ -82,6 +82,8 @@ public class PersonService {
                     .email(request.email())
                     .roleIds(request.roleIds())
                     .taxId(request.taxId())
+                    .address(request.address())
+                    .propertyIds(request.propertyIds())
                     .build();
             case INTERESTED_CLIENT -> document = InterestedClientDocument.builder()
                     .authUserId(request.authUserId())
@@ -189,18 +191,22 @@ public class PersonService {
     }
 
     private PersonResponse mapToResponse(PersonDocument document) {
-        String dept = null, pos = null, tax = null, contact = null, budget = null;
+        String dept = null, pos = null, tax = null, address = null,
+            contact = null, budget = null;
+        List<String> propertyIds = null;
         Instant hire = null;
 
         if (document instanceof EmployeeDocument emp) {
             dept = emp.getDepartment();
-            pos = emp.getPosition();
+            pos  = emp.getPosition();
             hire = emp.getHireDate();
         } else if (document instanceof OwnerDocument owner) {
-            tax = owner.getTaxId();
+            tax        = owner.getTaxId();
+            address    = owner.getAddress();        // NUEVO
+            propertyIds = owner.getPropertyIds();   // NUEVO
         } else if (document instanceof InterestedClientDocument client) {
             contact = client.getPreferredContactMethod();
-            budget = client.getBudget();
+            budget  = client.getBudget();
         }
 
         return new PersonResponse(
@@ -215,7 +221,9 @@ public class PersonService {
                 document.getPersonType(),
                 document.getRoleIds(),
                 document.isCustomRole(),
-                dept, pos, hire, tax, contact, budget
+                dept, pos, hire,
+                tax, address, propertyIds,  // NUEVO
+                contact, budget
         );
     }
 }

@@ -21,8 +21,13 @@ public class InterestedClientProfileService {
                 request.phone(),
                 request.email(),
                 PersonType.INTERESTED_CLIENT,
-                null, 
-                null, null, null, null,
+                null,               // roleIds
+                null,               // department
+                null,               // position
+                null,               // hireDate
+                null,               // taxId
+                null,               // address
+                null,               // propertyIds
                 request.preferredContactMethod(),
                 request.budget()
         );
