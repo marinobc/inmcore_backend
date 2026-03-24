@@ -64,12 +64,12 @@ public class PersonController {
         return personService.findByAuthUserId(authUserId);
     }
 
-    @PatchMapping("/{id}")
+    @PutMapping("/{id}")
     public PersonResponse update(@PathVariable String id, @RequestBody UpdatePersonRequest request) {
         return personService.update(id, request);
     }
 
-    @PatchMapping("/by-auth/{authUserId}")
+    @PutMapping("/by-auth/{authUserId}")
     public PersonResponse updateByAuthUserId(@PathVariable String authUserId, @RequestBody UpdatePersonRequest request) {
         return personService.updateByAuthUserId(authUserId, request);
     }

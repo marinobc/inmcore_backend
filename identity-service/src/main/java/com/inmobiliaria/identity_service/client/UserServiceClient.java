@@ -13,8 +13,8 @@ public interface UserServiceClient {
     @PostMapping("/persons")
     Map<String, Object> createPerson(@RequestBody CreatePersonRequest request);
 
-    @PatchMapping("/persons/{id}")
-    Map<String, Object> updatePerson(@PathVariable("id") String id, @RequestBody UpdatePersonRequest request);
+    @PutMapping("/persons/by-auth/{authUserId}")
+    Map<String, Object> updatePersonByAuth(@PathVariable("authUserId") String authUserId, @RequestBody UpdatePersonRequest request);
 
     @GetMapping("/persons/by-auth/{authUserId}")
     Map<String, Object> getPersonByAuthUserId(@PathVariable("authUserId") String authUserId);

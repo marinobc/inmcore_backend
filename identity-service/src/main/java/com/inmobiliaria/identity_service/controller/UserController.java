@@ -38,26 +38,26 @@ public class UserController {
         return userService.findById(id);
     }
 
-    @PatchMapping("/{id}/role")
+    @PutMapping("/{id}/role")
     @PreAuthorize("hasRole('ADMIN')")
     public UserResponse assignRole(@PathVariable String id, @Valid @RequestBody AssignRoleRequest request) {
         return userService.assignRole(id, request);
     }
 
-    @PatchMapping("/{id}")
+    @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public UserResponse update(@PathVariable String id, @Valid @RequestBody com.inmobiliaria.identity_service.dto.request.UpdateUserRequest request) {
         return userService.update(id, request);
     }
 
-    @PatchMapping("/{id}/deactivate")
+    @PutMapping("/{id}/deactivate")
     @ResponseStatus(HttpStatus.OK)
     @PreAuthorize("hasRole('ADMIN')")
     public UserResponse deactivate(@PathVariable String id) {
         return userService.deactivate(id);
     }
 
-    @PatchMapping("/{id}/reactivate")
+    @PutMapping("/{id}/reactivate")
     @ResponseStatus(HttpStatus.OK)
     @PreAuthorize("hasRole('ADMIN')")
     public UserResponse reactivate(@PathVariable String id) {

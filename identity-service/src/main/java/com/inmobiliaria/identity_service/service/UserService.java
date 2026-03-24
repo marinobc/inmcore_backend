@@ -153,10 +153,10 @@ public class UserService {
             profileUpdate.budget() != null) {
 
             try {
-                userServiceClient.updatePerson(id, profileUpdate);
+                userServiceClient.updatePersonByAuth(id, profileUpdate);
                 log.info("Profile updated in user-service for authUserId: {}", id);
             } catch (Exception e) {
-                log.warn("Could not sync update with user-service: {}", e.getMessage());
+                log.error("CRITICAL: Failed to sync update with user-service: {}", e.getMessage());
             }
         }
 
