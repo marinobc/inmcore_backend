@@ -2,7 +2,6 @@ package com.inmobiliaria.user_service.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import java.time.Instant;
 import java.time.LocalDate;
 
 public record CreateEmployeeRequest(
@@ -14,5 +13,5 @@ public record CreateEmployeeRequest(
         @NotBlank String email,
         @NotBlank String department,
         @NotBlank String position,
-        Instant hireDate
+        LocalDate hireDate
 ) {}

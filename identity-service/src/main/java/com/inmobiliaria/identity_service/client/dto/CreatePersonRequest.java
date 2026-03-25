@@ -1,6 +1,5 @@
 package com.inmobiliaria.identity_service.client.dto;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -17,7 +16,7 @@ public record CreatePersonRequest(
         // Employee-specific
         String department,
         String position,
-        Instant hireDate,
+        LocalDate hireDate,
 
         // Owner-specific
         String taxId,

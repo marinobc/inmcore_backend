@@ -1,7 +1,6 @@
 package com.inmobiliaria.user_service.dto.response;
 
 import com.inmobiliaria.user_service.domain.PersonType;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -21,7 +20,7 @@ public record PersonResponse(
         // Employee-specific
         String department,
         String position,
-        Instant hireDate,
+        LocalDate hireDate,
 
         // Owner-specific
         String taxId,

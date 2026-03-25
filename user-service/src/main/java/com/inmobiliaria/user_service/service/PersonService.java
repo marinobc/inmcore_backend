@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -194,7 +195,7 @@ public class PersonService {
         String dept = null, pos = null, tax = null, address = null,
             contact = null, budget = null;
         List<String> propertyIds = null;
-        Instant hire = null;
+        LocalDate hire = null;
 
         if (document instanceof EmployeeDocument emp) {
             dept = emp.getDepartment();

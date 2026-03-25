@@ -1,6 +1,5 @@
 package com.inmobiliaria.identity_service.client.dto;
 
-import java.time.Instant;
 import java.time.LocalDate;
 
 public record UpdatePersonRequest(
@@ -10,7 +9,7 @@ public record UpdatePersonRequest(
         String phone,
         String department,
         String position,
-        Instant hireDate,
+        LocalDate hireDate,
         String taxId,
         String preferredContactMethod,
         String budget
