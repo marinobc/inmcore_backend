@@ -29,7 +29,8 @@ public class InterestedClientProfileService {
                 null,               // address
                 null,               // propertyIds
                 request.preferredContactMethod(),
-                request.budget()
+                request.budget(),
+                null                // assignedAgentId
         );
         return personService.create(genericRequest);
     }

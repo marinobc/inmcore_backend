@@ -23,3 +23,9 @@ eureka:
   instance:
     hostname: localhost
     prefer-ip-address: true
+
+logging:
+  level:
+    com.inmobiliaria.user_service.service.PersonService: INFO
+  file:
+    name: logs/user-service-audit.log

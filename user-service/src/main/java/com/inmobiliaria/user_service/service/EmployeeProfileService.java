@@ -29,7 +29,8 @@ public class EmployeeProfileService {
                 null,               // address
                 null,               // propertyIds
                 null,               // preferredContactMethod
-                null                // budget
+                null,                       
+                null                // assignedAgentId
         );
         return personService.create(genericRequest);
     }

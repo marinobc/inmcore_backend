@@ -150,23 +150,91 @@ public class PersonService {
         PersonDocument person = personRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Person not found with id: " + id));
 
-        if (request.firstName() != null) person.setFirstName(request.firstName());
-        if (request.lastName() != null) person.setLastName(request.lastName());
+        List<AuditEntry.FieldChange> changes = new ArrayList<>();
+
+        if (request.firstName() != null && !request.firstName().equals(person.getFirstName())) {
+            changes.add(AuditEntry.FieldChange.builder()
+                    .field("firstName").oldValue(person.getFirstName()).newValue(request.firstName()).build());
+            person.setFirstName(request.firstName());
+        }
+        if (request.lastName() != null && !request.lastName().equals(person.getLastName())) {
+            changes.add(AuditEntry.FieldChange.builder()
+                    .field("lastName").oldValue(person.getLastName()).newValue(request.lastName()).build());
+            person.setLastName(request.lastName());
+        }
         if (person.getFirstName() != null && person.getLastName() != null) {
             person.setFullName(person.getFirstName() + " " + person.getLastName());
         }
-        if (request.birthDate() != null) person.setBirthDate(request.birthDate());
-        if (request.phone() != null) person.setPhone(request.phone());
+        if (request.birthDate() != null && !request.birthDate().equals(person.getBirthDate())) {
+            changes.add(AuditEntry.FieldChange.builder()
+                    .field("birthDate")
+                    .oldValue(person.getBirthDate() != null ? person.getBirthDate().toString() : null)
+                    .newValue(request.birthDate().toString()).build());
+            person.setBirthDate(request.birthDate());
+        }
+        if (request.phone() != null && !request.phone().equals(person.getPhone())) {
+            changes.add(AuditEntry.FieldChange.builder()
+                    .field("phone").oldValue(person.getPhone()).newValue(request.phone()).build());
+            person.setPhone(request.phone());
+        }
 
         if (person instanceof EmployeeDocument emp) {
-            if (request.department() != null) emp.setDepartment(request.department());
-            if (request.position() != null) emp.setPosition(request.position());
-            if (request.hireDate() != null) emp.setHireDate(request.hireDate());
+            if (request.department() != null && !request.department().equals(emp.getDepartment())) {
+                changes.add(AuditEntry.FieldChange.builder()
+                        .field("department").oldValue(emp.getDepartment()).newValue(request.department()).build());
+                emp.setDepartment(request.department());
+            }
+            if (request.position() != null && !request.position().equals(emp.getPosition())) {
+                changes.add(AuditEntry.FieldChange.builder()
+                        .field("position").oldValue(emp.getPosition()).newValue(request.position()).build());
+                emp.setPosition(request.position());
+            }
+            if (request.hireDate() != null && !request.hireDate().equals(emp.getHireDate())) {
+                changes.add(AuditEntry.FieldChange.builder()
+                        .field("hireDate")
+                        .oldValue(emp.getHireDate() != null ? emp.getHireDate().toString() : null)
+                        .newValue(request.hireDate().toString()).build());
+                emp.setHireDate(request.hireDate());
+            }
         } else if (person instanceof OwnerDocument owner) {
-            if (request.taxId() != null) owner.setTaxId(request.taxId());
+            if (request.taxId() != null && !request.taxId().equals(owner.getTaxId())) {
+                changes.add(AuditEntry.FieldChange.builder()
+                        .field("taxId").oldValue(owner.getTaxId()).newValue(request.taxId()).build());
+                owner.setTaxId(request.taxId());
+            }
         } else if (person instanceof InterestedClientDocument client) {
-            if (request.preferredContactMethod() != null) client.setPreferredContactMethod(request.preferredContactMethod());
-            if (request.budget() != null) client.setBudget(request.budget());
+            if (request.preferredContactMethod() != null && !request.preferredContactMethod().equals(client.getPreferredContactMethod())) {
+                changes.add(AuditEntry.FieldChange.builder()
+                        .field("preferredContactMethod")
+                        .oldValue(client.getPreferredContactMethod())
+                        .newValue(request.preferredContactMethod()).build());
+                client.setPreferredContactMethod(request.preferredContactMethod());
+            }
+            if (request.budget() != null && !request.budget().equals(client.getBudget())) {
+                changes.add(AuditEntry.FieldChange.builder()
+                        .field("budget").oldValue(client.getBudget()).newValue(request.budget()).build());
+                client.setBudget(request.budget());
+            }
+        }
+
+        if (!changes.isEmpty()) {
+            // Obtener el editor desde el header X-Auth-User-Id
+            String changedBy = getCurrentUserId();
+
+            AuditEntry entry = AuditEntry.builder()
+                    .changedAt(Instant.now())
+                    .changedBy(changedBy)
+                    .changes(changes)
+                    .build();
+
+            if (person.getAuditLog() == null) {
+                person.setAuditLog(new ArrayList<>());
+            }
+            person.getAuditLog().add(entry);
+
+            // Persistencia en archivo via Slf4j (va a logs/user-service-audit.log)
+            changes.forEach(c -> log.info("AUDIT | person={} | changedBy={} | field={} | old={} | new={}",
+                    person.getId(), changedBy, c.getField(), c.getOldValue(), c.getNewValue()));
         }
 
         person.setUpdatedAt(Instant.now());
@@ -293,6 +361,19 @@ public class PersonService {
 
         client.setUpdatedAt(Instant.now());
         return mapToResponse(personRepository.save(client));
+    }
+
+    private String getCurrentUserId() {
+        try {
+            jakarta.servlet.http.HttpServletRequest request =
+                ((org.springframework.web.context.request.ServletRequestAttributes)
+                    org.springframework.web.context.request.RequestContextHolder.getRequestAttributes())
+                .getRequest();
+            String userId = request.getHeader("X-Auth-User-Id");
+            return userId != null ? userId : "unknown";
+        } catch (Exception e) {
+            return "unknown";
+        }
     }
 
     private PersonResponse mapToResponse(PersonDocument document) {
