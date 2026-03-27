@@ -1,5 +1,6 @@
 package com.inmobiliaria.property_service.controller;
 
+import com.inmobiliaria.property_service.dto.request.AccessPolicyRequest;
 import com.inmobiliaria.property_service.dto.request.AssignAgentRequest;
 import com.inmobiliaria.property_service.dto.request.PropertyRequest;
 import com.inmobiliaria.property_service.dto.request.UpdatePriceRequest;
@@ -8,6 +9,8 @@ import com.inmobiliaria.property_service.service.PropertyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -57,6 +60,15 @@ public class PropertyController {
         return propertyService.updatePrice(id, request.newPrice(), adminId);
     }
 
+    @PatchMapping("/{id}/access-policy")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('AGENT')")
+    public PropertyResponse updateAccessPolicy(
+            @PathVariable String id,
+            @Valid @RequestBody AccessPolicyRequest request,
+            @RequestHeader("X-Auth-User-Id") String userId) {
+        return propertyService.updateAccessPolicy(id, request.accessPolicy(), userId);
+    }
+
     @PostMapping("/{id}/images/confirm")
     @PreAuthorize("hasRole('AGENT')")
     public PropertyResponse confirmImages(
@@ -68,5 +80,39 @@ public class PropertyController {
     @GetMapping
     public List<PropertyResponse> findAll() {
         return propertyService.findAll(); // Implementar en el service con propertyRepository.findAll()
+    }
+
+    @GetMapping("/search")
+    public List<PropertyResponse> searchProperties(@RequestParam String term) {
+        return propertyService.searchByTerm(term);
+    }
+
+    @GetMapping("/{id}")
+    public PropertyResponse findById(@PathVariable String id) {
+        return propertyService.findById(id);
+    }
+
+    @GetMapping("/owner/{ownerId}")
+    @PreAuthorize("hasRole('OWNER')")
+    public List<PropertyResponse> getByOwner(@PathVariable String ownerId) {
+        // Validate the authenticated user is the owner
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String authenticatedUserId = (String) auth.getPrincipal();
+        
+        if (!authenticatedUserId.equals(ownerId)) {
+            throw new SecurityException("You can only view your own properties");
+        }
+        
+        return propertyService.findByOwner(ownerId);
+    }
+
+    @PatchMapping("/{id}/assign-owner")
+    @PreAuthorize("hasRole('ADMIN')")
+    public PropertyResponse assignOwner(
+            @PathVariable String id,
+            @RequestBody Map<String, String> request,
+            @RequestHeader("X-Auth-User-Id") String adminId) {
+        String ownerId = request.get("ownerId");
+        return propertyService.assignOwner(id, ownerId, adminId);
     }
 }

@@ -6,5 +6,5 @@ SERVICE = {
     "type":       "node",
     "npm_script": "dev",          # change to "start", "serve", etc. if needed
     "color":      GREEN,
-    "order":      8,
+    "order":      9,
 }

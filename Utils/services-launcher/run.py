@@ -6,14 +6,15 @@
 ║  Project structure expected:                                         ║
 ║                                                                      ║
 ║  Proyecto Taller Desarrollo/                                         ║
-║  ├── Backend/                        ← browse to this               ║
+║  ├── Backend/                        ← browse to this                ║
 ║  │   ├── api-gateway/    (order 1)                                   ║
 ║  │   ├── service-registry/ (order 2)                                 ║
 ║  │   ├── access-control-service/ (order 3)                           ║
 ║  │   ├── identity-service/ (order 4)                                 ║
-║  │   └── notification-service/ (order 5)                            ║
-║  └── Frontend/                       ← browse to this               ║
-║      └── package.json  (npm run dev, order 6)                        ║
+║  │   ├── notification-service/ (order 5)                             ║
+║  │   └── visit-calendar-service/ (order 8)                           ║
+║  └── Frontend/                       ← browse to this                ║
+║      └── package.json  (npm run dev, order 9)                        ║
 ║                                                                      ║
 ║  Adding a new microservice                                           ║
 ║  ─────────────────────────                                           ║

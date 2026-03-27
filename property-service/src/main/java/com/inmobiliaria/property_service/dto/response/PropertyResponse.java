@@ -3,6 +3,7 @@ package com.inmobiliaria.property_service.dto.response;
 import com.inmobiliaria.property_service.domain.AssignmentHistory;
 import com.inmobiliaria.property_service.domain.PriceHistory;
 import java.util.List;
+import java.util.Set;
 
 public record PropertyResponse(
     String id,
@@ -16,5 +17,6 @@ public record PropertyResponse(
     String assignedAgentId,
     List<String> imageUrls,
     List<AssignmentHistory> assignmentHistory,
-    List<PriceHistory> priceHistory
+    List<PriceHistory> priceHistory,
+    Set<String> accessPolicy
 ) {}

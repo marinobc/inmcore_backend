@@ -8,4 +8,5 @@ import java.util.List;
 @Repository
 public interface PropertyRepository extends MongoRepository<PropertyDocument, String> {
     List<PropertyDocument> findByAssignedAgentId(String assignedAgentId);
+    List<PropertyDocument> findByOwnerId(String ownerId);
 }
