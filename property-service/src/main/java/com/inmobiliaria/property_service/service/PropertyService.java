@@ -90,6 +90,16 @@ public class PropertyService {
         );
     }
 
+    public List<PropertyResponse> searchByTerm(String term) {
+        // Buscamos coincidencias parciales (case-insensitive) en título o dirección
+        return propertyRepository.findAll().stream()
+                .filter(p -> p.getTitle().toLowerCase().contains(term.toLowerCase()) || 
+                            p.getAddress().toLowerCase().contains(term.toLowerCase()))
+                .limit(10) // Limitamos para no sobrecargar el dropdown
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
     private boolean hasAccessToProperty(String propertyId) {
         var property = propertyRepository.findById(propertyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inmueble no encontrado"));

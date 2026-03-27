@@ -79,4 +79,14 @@ public class PropertyController {
     public List<PropertyResponse> findAll() {
         return propertyService.findAll(); // Implementar en el service con propertyRepository.findAll()
     }
+
+    @GetMapping("/search")
+    public List<PropertyResponse> searchProperties(@RequestParam String term) {
+        return propertyService.searchByTerm(term);
+    }
+
+    @GetMapping("/{id}")
+    public PropertyResponse findById(@PathVariable String id) {
+        return propertyService.findById(id);
+    }
 }
