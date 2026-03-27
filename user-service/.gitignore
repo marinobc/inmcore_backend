@@ -1,5 +1,8 @@
 HELP.md
 target/
+# Exclude the logs directory
+logs/
+*.log
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
