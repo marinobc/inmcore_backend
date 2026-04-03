@@ -1,5 +1,8 @@
 package com.inmobiliaria.property_service.dto.request;
 
+
+import com.inmobiliaria.property_service.domain.OperationType;
+
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -23,6 +26,9 @@ public record PropertyRequest(
 
         @NotBlank(message = "Debe especificar el tipo de inmueble (Apartamento, Casa, etc.)")
         String type,
+
+        @NotNull(message = "El tipo de operación es obligatorio") 
+        OperationType operationType,
 
         @NotNull(message = "Los metros cuadrados (m2) son obligatorios")
         @Positive(message = "El área debe ser un número positivo")

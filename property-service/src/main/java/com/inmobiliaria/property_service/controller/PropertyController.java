@@ -53,8 +53,8 @@ public class PropertyController {
                 .toList();
 
         // LLamada unificada: El servicio filtra por seguridad automáticamente
-        return propertyService.findWithFilters(title, type, status, minPrice, maxPrice, agentId, currentUserId, roles,
-                sortBy, sortOrder, page, pageSize);
+        return propertyService.findWithFilters(title, type, status, null, minPrice, maxPrice, agentId, currentUserId,
+                roles, sortBy, sortOrder, page, pageSize);
     }
 
     @PostMapping
@@ -92,5 +92,13 @@ public class PropertyController {
     @PreAuthorize("hasRole('AGENT') or hasRole('ADMIN')")
     public Map<String, String> getUploadUrl(@PathVariable String id) {
         return propertyService.generatePresignedUrl(id);
+    }
+
+    @PatchMapping("/{id}/operation-type")
+    @PreAuthorize("hasRole('ADMIN')")
+    public PropertyResponse updateOperationType(
+            @PathVariable String id,
+            @Valid @RequestBody UpdateOperationTypeRequest request) {
+        return propertyService.updateOperationType(id, request.operationType());
     }
 }

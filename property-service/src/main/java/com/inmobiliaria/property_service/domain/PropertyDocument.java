@@ -17,6 +17,7 @@ public class PropertyDocument extends BaseDocument {
     private String address;
     private Double price;
     private String type;
+    private OperationType operationType;
     private Double m2;
     private Integer rooms;
     private String status;
