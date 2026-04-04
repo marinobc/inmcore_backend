@@ -203,7 +203,7 @@ public class PropertyService {
     private PropertyResponse mapToResponse(PropertyDocument doc) {
         return new PropertyResponse(
                 doc.getId(), doc.getTitle(), doc.getAddress(), doc.getPrice(),
-                doc.getType(), null, doc.getM2(), doc.getRooms(), doc.getStatus(),
+                doc.getType(), doc.getOperationType(), doc.getM2(), doc.getRooms(), doc.getStatus(),
                 doc.getAssignedAgentId(), doc.getImageUrls(),
                 doc.getAssignmentHistory(), doc.getPriceHistory(),
                 doc.getAccessPolicy());
