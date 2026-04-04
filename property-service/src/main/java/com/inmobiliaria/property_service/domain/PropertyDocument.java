@@ -9,7 +9,11 @@ import java.util.List;
 import java.util.Set;
 
 @Document(collection = "properties")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class PropertyDocument extends BaseDocument {
     @Id
     private String id;
@@ -34,6 +38,30 @@ public class PropertyDocument extends BaseDocument {
     private List<PriceHistory> priceHistory = new ArrayList<>();
 
     @Builder.Default
-    private Set<String> accessPolicy = new HashSet<>();  // roles o usuarios con permiso de lectura
+    private Set<String> accessPolicy = new HashSet<>();
 
+    @Builder.Default
+    private List<DocumentMetadata> documents = new ArrayList<>();
+
+    @Builder.Default
+    private List<ImageMetadata> images = new ArrayList<>();
+
+    @Builder.Default
+    private boolean deleted = false;
+
+    // Helper methods
+    public void addImageUrl(String imageUrl) {
+        if (this.imageUrls == null) {
+            this.imageUrls = new ArrayList<>();
+        }
+        if (!this.imageUrls.contains(imageUrl)) {
+            this.imageUrls.add(imageUrl);
+        }
+    }
+
+    public void removeImageUrl(String imageUrl) {
+        if (this.imageUrls != null) {
+            this.imageUrls.removeIf(url -> url.equals(imageUrl) || url.contains(imageUrl));
+        }
+    }
 }

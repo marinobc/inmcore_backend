@@ -31,8 +31,8 @@ spring:
             - AuthenticationFilter
         - id: property-service
           uri: lb://PROPERTY-SERVICE
-          predicates:
-            - Path=/properties/**,/properties
+          predicates: 
+            - Path=/properties/**,/properties,/documents/**,/documents
           filters:
             - AuthenticationFilter
         - id: user-service

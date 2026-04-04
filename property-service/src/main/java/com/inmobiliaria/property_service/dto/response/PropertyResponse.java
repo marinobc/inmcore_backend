@@ -17,6 +17,7 @@ public record PropertyResponse(
     Integer rooms,
     String status,
     String assignedAgentId,
+    String ownerId, // <--- AGREGAR ESTE CAMPO
     List<String> imageUrls,
     List<AssignmentHistory> assignmentHistory,
     List<PriceHistory> priceHistory,

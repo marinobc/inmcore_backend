@@ -9,12 +9,14 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.inmobiliaria.property_service.client.IdentityClient;
 import com.inmobiliaria.property_service.domain.*;
 import com.inmobiliaria.property_service.dto.request.*;
 import com.inmobiliaria.property_service.dto.response.PropertyResponse;
 import com.inmobiliaria.property_service.exception.ResourceNotFoundException;
+import com.inmobiliaria.property_service.exception.ValidationException;
 import com.inmobiliaria.property_service.repository.PropertyRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -27,8 +29,12 @@ public class PropertyService {
 
     private final PropertyRepository propertyRepository;
     private final IdentityClient identityClient;
-    private final MongoTemplate mongoTemplate; // Inyectado para búsquedas dinámicas
+    private final MongoTemplate mongoTemplate;
+    private final ImageService imageService;
 
+    /**
+     * Búsqueda avanzada con filtros dinámicos y seguridad por rol.
+     */
     public Map<String, Object> findWithFilters(
             String title, String type, String status,
             OperationType operationType,
@@ -39,7 +45,8 @@ public class PropertyService {
         Query query = new Query();
         List<Criteria> filters = new ArrayList<>();
 
-        // 1. Filtros de la Barra de Herramientas
+        filters.add(Criteria.where("deleted").is(false));
+
         if (title != null && !title.isBlank()) {
             filters.add(Criteria.where("title").regex(title, "i"));
         }
@@ -62,8 +69,7 @@ public class PropertyService {
             filters.add(Criteria.where("assignedAgentId").is(agentId));
         }
 
-        // 2. Seguridad por Rol (Lógica de visibilidad)
-        // Si NO es ADMIN, aplicamos restricción de visibilidad
+        // Seguridad: Si no es ADMIN, solo ve sus asignadas o las permitidas por política
         if (!roles.contains("ROLE_ADMIN")) {
             Criteria securityCriteria = new Criteria().orOperator(
                     Criteria.where("assignedAgentId").is(currentUserId),
@@ -75,11 +81,7 @@ public class PropertyService {
             query.addCriteria(new Criteria().andOperator(filters.toArray(new Criteria[0])));
         }
 
-        // Ordenación
-        Sort.Direction direction = "DESC".equalsIgnoreCase(sortOrder)
-                ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
-
+        Sort.Direction direction = "DESC".equalsIgnoreCase(sortOrder) ? Sort.Direction.DESC : Sort.Direction.ASC;
         String sortField = switch (sortBy) {
             case "title" -> "title";
             case "m2" -> "m2";
@@ -88,10 +90,8 @@ public class PropertyService {
             default -> "price";
         };
 
-        // Contar total sin paginar
         long total = mongoTemplate.count(query, PropertyDocument.class);
 
-        // Aplicar ordenación y paginación
         query.with(Sort.by(direction, sortField))
                 .skip((long) page * pageSize)
                 .limit(pageSize);
@@ -109,7 +109,6 @@ public class PropertyService {
         return result;
     }
 
-    // Métodos existentes simplificados para usar la misma lógica
     public List<PropertyResponse> findAll() {
         return propertyRepository.findAll().stream().map(this::mapToResponse).toList();
     }
@@ -139,20 +138,6 @@ public class PropertyService {
         return mapToResponse(propertyRepository.save(property));
     }
 
-    public Map<String, String> generatePresignedUrl(String id) {
-        String fileName = UUID.randomUUID() + ".jpg";
-        String objectKey = "properties/" + id + "/images/" + fileName;
-        return Map.of(
-                "uploadUrl", "http://localhost:9000/bucket/" + objectKey + "?sig=mock",
-                "publicUrl", "http://localhost:9000/bucket/" + objectKey);
-    }
-
-    public PropertyResponse addImages(String id, List<String> urls) {
-        PropertyDocument prop = propertyRepository.findById(id).orElseThrow();
-        prop.getImageUrls().addAll(urls);
-        return mapToResponse(propertyRepository.save(prop));
-    }
-
     public PropertyResponse updatePrice(String id, Double newPrice, String adminId) {
         PropertyDocument prop = propertyRepository.findById(id).orElseThrow();
         prop.getPriceHistory().add(new PriceHistory(prop.getPrice(), newPrice, Instant.now(), adminId));
@@ -174,38 +159,117 @@ public class PropertyService {
         return propertyRepository.findByAssignedAgentId(agentId).stream().map(this::mapToResponse).toList();
     }
 
-    public PropertyResponse updateAccessPolicy(String id, Set<String> accessPolicy, String userId) {
-        PropertyDocument prop = propertyRepository.findById(id).orElseThrow();
-        prop.setAccessPolicy(accessPolicy);
-        return mapToResponse(propertyRepository.save(prop));
-    }
-
     public List<PropertyResponse> findByOwner(String ownerId) {
         return propertyRepository.findByOwnerId(ownerId).stream().map(this::mapToResponse).toList();
     }
 
     public PropertyResponse assignOwner(String id, String ownerId, String adminId) {
-        PropertyDocument prop = propertyRepository.findById(id).orElseThrow();
+        PropertyDocument prop = propertyRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Property not found: " + id));
+        
+        // Optional: Validate owner exists in identity service
+        try {
+            var owner = identityClient.findById(ownerId);
+            if (!"ACTIVE".equals(owner.status())) {
+                throw new ValidationException("Owner is not active");
+            }
+        } catch (Exception e) {
+            log.warn("Could not validate owner: {}", e.getMessage());
+        }
+        
         prop.setOwnerId(ownerId);
+        prop.setUpdatedAt(Instant.now());
+        
+        // Add to audit/assignment history if needed
+        if (prop.getAssignmentHistory() == null) {
+            prop.setAssignmentHistory(new ArrayList<>());
+        }
+        prop.getAssignmentHistory().add(new AssignmentHistory(
+            prop.getAssignedAgentId(), 
+            Instant.now(), 
+            adminId
+        ));
+        
         return mapToResponse(propertyRepository.save(prop));
     }
 
     public PropertyResponse updateOperationType(String id, OperationType newType) {
         PropertyDocument prop = propertyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Inmueble no encontrado"));
-
         prop.setOperationType(newType);
         prop.setUpdatedAt(Instant.now());
-
         return mapToResponse(propertyRepository.save(prop));
     }
 
-    private PropertyResponse mapToResponse(PropertyDocument doc) {
+    /**
+     * Mapea el documento a DTO incluyendo la generación de URLs temporales firmadas para imágenes.
+     */
+    public PropertyResponse mapToResponse(PropertyDocument doc) {
+        List<String> urls = new ArrayList<>();
+        
+        if (doc.getImages() != null && !doc.getImages().isEmpty()) {
+            urls = doc.getImages().stream()
+                    .map(img -> imageService.generateTemporaryImageUrl(img))
+                    .collect(Collectors.toList());
+        } else if (doc.getImageUrls() != null) {
+            urls = doc.getImageUrls();
+        }
+
         return new PropertyResponse(
-                doc.getId(), doc.getTitle(), doc.getAddress(), doc.getPrice(),
-                doc.getType(), doc.getOperationType(), doc.getM2(), doc.getRooms(), doc.getStatus(),
-                doc.getAssignedAgentId(), doc.getImageUrls(),
-                doc.getAssignmentHistory(), doc.getPriceHistory(),
-                doc.getAccessPolicy());
+                doc.getId(), 
+                doc.getTitle(), 
+                doc.getAddress(), 
+                doc.getPrice(),
+                doc.getType(), 
+                doc.getOperationType(), 
+                doc.getM2(), 
+                doc.getRooms(), 
+                doc.getStatus(),
+                doc.getAssignedAgentId(), 
+                doc.getOwnerId(), // <--- PASAR EL OWNER ID AQUÍ
+                urls, 
+                doc.getAssignmentHistory() != null ? doc.getAssignmentHistory() : new ArrayList<>(),
+                doc.getPriceHistory() != null ? doc.getPriceHistory() : new ArrayList<>(),
+                doc.getAccessPolicy() != null ? doc.getAccessPolicy() : new HashSet<>()
+        );
+    }
+
+    /**
+     * CORRECCIÓN CRÍTICA: Eliminación de imagen estrictamente por ID.
+     * Esto evita que el API Gateway detecte caracteres maliciosos (//) en la URL de la petición.
+     */
+    public PropertyResponse deleteImage(String propertyId, String imageId) {
+        PropertyDocument property = propertyRepository.findById(propertyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Property not found: " + propertyId));
+        
+        if (property.getImages() != null) {
+            // Buscamos estrictamente por el ID interno generado en MongoDB (UUID)
+            Optional<ImageMetadata> imgOpt = property.getImages().stream()
+                    .filter(img -> img.getId().equals(imageId))
+                    .findFirst();
+
+            if (imgOpt.isPresent()) {
+                log.info("Eliminando imagen con ID: {} de la propiedad: {}", imageId, propertyId);
+                imageService.deleteImage(propertyId, imageId);
+            } else {
+                log.error("No se pudo borrar: la imagen con ID {} no pertenece a la propiedad {}", imageId, propertyId);
+                throw new ResourceNotFoundException("La imagen solicitada no existe en este inmueble");
+            }
+        }
+        
+        return mapToResponse(propertyRepository.findById(propertyId).orElseThrow());
+    }
+
+    public void deleteProperty(String id, String adminId) {
+        PropertyDocument property = propertyRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Inmueble no encontrado: " + id));
+        
+        property.setDeleted(true);
+        property.setStatus("ELIMINADO"); // Opcional: cambiar el status visual también
+        property.setUpdatedAt(Instant.now());
+        
+        propertyRepository.save(property);
+        
+        log.info("Propiedad {} marcada como eliminada (lógico) por admin: {}", id, adminId);
     }
 }

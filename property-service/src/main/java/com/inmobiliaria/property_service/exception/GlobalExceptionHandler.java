@@ -23,4 +23,18 @@ public class GlobalExceptionHandler {
         problem.setTitle("Internal Server Error");
         return problem;
     }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail handleAccessDenied(AccessDeniedException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+        problem.setTitle("Access Denied");
+        return problem;
+    }
+
+    @ExceptionHandler(ValidationException.class)
+    public ProblemDetail handleValidation(ValidationException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        problem.setTitle("Validation Error");
+        return problem;
+    }
 }

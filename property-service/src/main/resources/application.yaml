@@ -19,3 +19,15 @@ eureka:
   instance:
     hostname: localhost
     prefer-ip-address: true
+
+minio:
+  endpoint: http://localhost:9000
+  access-key: minioadmin
+  secret-key: minioadmin
+  bucket: properties
+  images:
+    bucket: property-images
+  documents:
+    bucket: documents
+  presigned:
+    expiry-minutes: 15

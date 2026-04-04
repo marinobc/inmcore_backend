@@ -21,10 +21,10 @@ public class PropertyController {
 
     private final PropertyService propertyService;
 
-    // --- AGREGA ESTE MÉTODO ---
+    // --- READ OPERATIONS ---
+
     @GetMapping("/agent/{agentId}")
     public List<PropertyResponse> findByAgent(@PathVariable String agentId) {
-        // Usamos el método que ya tienes creado en tu PropertyService
         return propertyService.findByAgent(agentId);
     }
 
@@ -43,10 +43,8 @@ public class PropertyController {
             @RequestParam(required = false, defaultValue = "9") int pageSize) {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-
-        // SEGURIDAD: Validar que auth no sea nulo antes de usarlo
         if (auth == null || !auth.isAuthenticated()) {
-            return Collections.emptyMap(); // O lanzar una excepción de acceso denegado
+            return Collections.emptyMap();
         }
 
         String currentUserId = (String) auth.getPrincipal();
@@ -54,10 +52,16 @@ public class PropertyController {
                 .map(GrantedAuthority::getAuthority)
                 .toList();
 
-        // Llamada unificada: El servicio filtra por seguridad automáticamente
         return propertyService.findWithFilters(title, type, status, operationType, minPrice, maxPrice, agentId,
                 currentUserId, roles, sortBy, sortOrder, page, pageSize);
     }
+
+    @GetMapping("/{id}")
+    public PropertyResponse findById(@PathVariable String id) {
+        return propertyService.findById(id);
+    }
+
+    // --- WRITE OPERATIONS (PROPERTY AGGREGATE) ---
 
     @PostMapping
     @PreAuthorize("hasRole('AGENT') or hasRole('ADMIN')")
@@ -67,9 +71,13 @@ public class PropertyController {
         return propertyService.create(request, agentId);
     }
 
-    @GetMapping("/{id}")
-    public PropertyResponse findById(@PathVariable String id) {
-        return propertyService.findById(id);
+    @PatchMapping("/{id}/assign-owner")
+    @PreAuthorize("hasRole('ADMIN')")
+    public PropertyResponse assignOwner(
+            @PathVariable String id,
+            @RequestBody AssignOwnerRequest request,
+            @RequestHeader("X-Auth-User-Id") String adminId) {
+        return propertyService.assignOwner(id, request.ownerId(), adminId);
     }
 
     @PatchMapping("/{id}/price")
@@ -90,17 +98,17 @@ public class PropertyController {
         return propertyService.assignAgent(id, request, adminId);
     }
 
-    @PostMapping("/{id}/images/upload")
-    @PreAuthorize("hasRole('AGENT') or hasRole('ADMIN')")
-    public Map<String, String> getUploadUrl(@PathVariable String id) {
-        return propertyService.generatePresignedUrl(id);
-    }
-
     @PatchMapping("/{id}/operation-type")
     @PreAuthorize("hasRole('ADMIN')")
     public PropertyResponse updateOperationType(
             @PathVariable String id,
             @Valid @RequestBody UpdateOperationTypeRequest request) {
         return propertyService.updateOperationType(id, request.operationType());
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public void delete(@PathVariable String id, @RequestHeader("X-Auth-User-Id") String adminId) {
+        propertyService.deleteProperty(id, adminId);
     }
 }

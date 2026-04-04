@@ -1,7 +1,6 @@
 package com.inmobiliaria.user_service.service;
 
 import com.inmobiliaria.user_service.client.AccessControlClient;
-import com.inmobiliaria.user_service.client.IdentityClient;
 import com.inmobiliaria.user_service.domain.*;
 import com.inmobiliaria.user_service.dto.request.CreateInterestedClientRequest;
 import com.inmobiliaria.user_service.dto.request.CreatePersonRequest;
@@ -28,7 +27,6 @@ import java.util.stream.Collectors;
 public class PersonService {
 
     private final PersonRepository personRepository;
-    private final IdentityClient identityClient;
     private final AccessControlClient accessControlClient;
     private final AuditLogRepository auditLogRepository;
 
