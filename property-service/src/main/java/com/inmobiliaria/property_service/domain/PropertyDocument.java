@@ -49,6 +49,9 @@ public class PropertyDocument extends BaseDocument {
     @Builder.Default
     private boolean deleted = false;
 
+    @Builder.Default
+    private List<StatusHistory> statusHistory = new ArrayList<>();
+
     // Helper methods
     public void addImageUrl(String imageUrl) {
         if (this.imageUrls == null) {

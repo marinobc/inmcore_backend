@@ -111,4 +111,19 @@ public class PropertyController {
     public void delete(@PathVariable String id, @RequestHeader("X-Auth-User-Id") String adminId) {
         propertyService.deleteProperty(id, adminId);
     }
+
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('AGENT') or hasRole('ADMIN')")
+    public PropertyResponse updateStatus(
+            @PathVariable String id,
+            @Valid @RequestBody UpdateStatusRequest request,
+            @RequestHeader("X-Auth-User-Id") String userId) {
+        
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        List<String> roles = auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+
+        return propertyService.updateStatus(id, request.status(), userId, roles);
+    }
 }

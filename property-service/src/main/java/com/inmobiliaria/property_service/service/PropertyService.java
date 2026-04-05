@@ -9,12 +9,12 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.inmobiliaria.property_service.client.IdentityClient;
 import com.inmobiliaria.property_service.domain.*;
 import com.inmobiliaria.property_service.dto.request.*;
 import com.inmobiliaria.property_service.dto.response.PropertyResponse;
+import com.inmobiliaria.property_service.exception.AccessDeniedException;
 import com.inmobiliaria.property_service.exception.ResourceNotFoundException;
 import com.inmobiliaria.property_service.exception.ValidationException;
 import com.inmobiliaria.property_service.repository.PropertyRepository;
@@ -271,5 +271,35 @@ public class PropertyService {
         propertyRepository.save(property);
         
         log.info("Propiedad {} marcada como eliminada (lógico) por admin: {}", id, adminId);
+    }
+
+    public PropertyResponse updateStatus(String id, String newStatus, String currentUserId, List<String> roles) {
+        PropertyDocument prop = propertyRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Inmueble no encontrado"));
+
+        // --- Backend Task 1: Validation (PA1) ---
+        boolean isAdmin = roles.contains("ROLE_ADMIN");
+        boolean isAssignedAgent = currentUserId.equals(prop.getAssignedAgentId());
+
+        if (!isAdmin && !isAssignedAgent) {
+            throw new AccessDeniedException("No tiene autorización para cambiar el estado de este inmueble. Solo el responsable o un administrador pueden hacerlo.");
+        }
+
+        // --- Backend Task 2: Register History ---
+        if (prop.getStatusHistory() == null) {
+            prop.setStatusHistory(new ArrayList<>());
+        }
+
+        prop.getStatusHistory().add(StatusHistory.builder()
+                .oldStatus(prop.getStatus())
+                .newStatus(newStatus.toUpperCase())
+                .changedAt(Instant.now())
+                .changedBy(currentUserId)
+                .build());
+
+        prop.setStatus(newStatus.toUpperCase());
+        prop.setUpdatedAt(Instant.now());
+
+        return mapToResponse(propertyRepository.save(prop));
     }
 }
