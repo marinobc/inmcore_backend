@@ -47,6 +47,12 @@ spring:
             - Path=/api/calendar/**, /api/visits/**, /api/visit-requests/**
           filters:
             - StripPrefix=0
+        - id: favorites-route
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/favoritos/**
+          filters:
+            - AuthenticationFilter
 
 eureka:
   client:

@@ -25,22 +25,25 @@ public class UserContextFilter extends OncePerRequestFilter {
         String userId = request.getHeader("X-Auth-User-Id");
         String rolesHeader = request.getHeader("X-Auth-Roles");
 
-        if (userId != null && rolesHeader != null) {
+        if (userId != null && !userId.isBlank()) {
 
-            // rolesHeader will likely come as "[ADMIN, AGENT]" from API Gateway since it's a list toString()
-            String cleanRoles = rolesHeader.replace("[", "").replace("]", "").replace(" ", "");
+            List<SimpleGrantedAuthority> authorities = List.of();
 
-            if (!cleanRoles.isEmpty()) {
-                List<SimpleGrantedAuthority> authorities = Arrays.stream(cleanRoles.split(","))
-                        .filter(role -> !role.isEmpty())
-                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                        .collect(Collectors.toList());
+            if (rolesHeader != null) {
+                String cleanRoles = rolesHeader.replace("[", "").replace("]", "").replace(" ", "");
 
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userId, null, authorities);
-
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                if (!cleanRoles.isEmpty()) {
+                    authorities = Arrays.stream(cleanRoles.split(","))
+                            .filter(role -> !role.isEmpty())
+                            .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                            .collect(Collectors.toList());
+                }
             }
+
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(userId, null, authorities);
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
         }
 
         filterChain.doFilter(request, response);
