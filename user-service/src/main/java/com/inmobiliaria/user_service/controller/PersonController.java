@@ -53,8 +53,12 @@ public class PersonController {
     }
 
     @GetMapping
-    public List<PersonResponse> findAll(@RequestParam(required = false) String type) {
-        return personService.findAll(type);
+    public ResponseEntity<List<PersonResponse>> findAll(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) Boolean activo,
+            @RequestHeader(value = "X-Auth-User-Id", required = false) String requesterId) {
+        // requesterId puede usarse para auditoría o validación, pero no es crítico para la lista
+        return ResponseEntity.ok(personService.findAll(type, activo));
     }
 
     @GetMapping("/{id}")
@@ -129,14 +133,6 @@ public class PersonController {
             throw new IllegalArgumentException("Missing X-Auth-User-Id header");
         }
         return personService.updateClientForAgent(agentId, clientId, updateRequest);
-    }
-
-    // Listar dados de baja
-    @GetMapping
-    public ResponseEntity<List<PersonResponse>> findAll(
-            @RequestParam(required = false) Boolean activo,
-            @RequestHeader("X-Auth-User-Id") String requesterId) {
-        return ResponseEntity.ok(personService.findAll(activo));
     }
 
     // Dar de baja (lógico, no físico)

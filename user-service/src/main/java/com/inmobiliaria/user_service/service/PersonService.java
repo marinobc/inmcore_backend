@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -327,12 +328,25 @@ public class PersonService {
         return mapToResponse(saved);
     }
 
-    public List<PersonResponse> findAll(Boolean activo) {
-        List<PersonDocument> all = personRepository.findAll();
-        return all.stream()
-                .filter(p -> activo == null || (p instanceof InterestedClientDocument c && c.isActivo() == activo))
-                .map(this::mapToResponse)
-                .collect(java.util.stream.Collectors.toList());
+    public List<PersonResponse> findAll(String type, Boolean activo) {
+        Stream<PersonDocument> stream = personRepository.findAll().stream();
+        
+        if (type != null && !type.isBlank()) {
+            stream = stream.filter(p -> p.getPersonType().name().equalsIgnoreCase(type));
+        }
+        
+        if (activo != null) {
+            stream = stream.filter(p -> {
+                if (p instanceof InterestedClientDocument client) {
+                    return client.isActivo() == activo;
+                }
+                // Para personas que no son clientes, se consideran siempre activas (o según su propio campo si existe)
+                // Por simplicidad, si no es cliente y activo=false, se excluyen.
+                return activo; // solo devolver si activo=true, porque no tienen campo activo
+            });
+        }
+        
+        return stream.map(this::mapToResponse).collect(Collectors.toList());
     }
 
     public List<PersonResponse> findClientesInactivos(java.time.LocalDate fechaLimite) {
@@ -358,24 +372,27 @@ public class PersonService {
             .collect(Collectors.toList());
     }
 
-    public void updateLastActivityDate(String personId) {
-        PersonDocument person = personRepository.findById(personId)
-                .orElseThrow(() -> new ResourceNotFoundException("Person not found: " + personId));
-        
+    public void updateLastActivityDate(String authUserId) {
+        PersonDocument person = personRepository.findByAuthUserId(authUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado con authUserId: " + authUserId));
         if (person instanceof InterestedClientDocument client) {
             client.setLastActivityDate(java.time.LocalDate.now());
             personRepository.save(client);
-            log.debug("Updated lastActivityDate for client: {}", personId);
-        } else {
-            log.warn("Attempted to update lastActivityDate for non-client person: {}", personId);
         }
     }
 
-    public void validarClienteActivo(String personId) {
-        PersonDocument person = personRepository.findById(personId)
-                .orElseThrow(() -> new ResourceNotFoundException("Person not found: " + personId));
-        if (person instanceof InterestedClientDocument client && !client.isActivo()) {
-            throw new IllegalStateException("El cliente con id " + personId + " está dado de baja y no puede operar.");
+    public void validarClienteActivo(String authUserId) {
+        PersonDocument person = personRepository.findByAuthUserId(authUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado con authUserId: " + authUserId));
+        if (person instanceof InterestedClientDocument client) {
+            if (!client.isActivo()) {
+                throw new IllegalStateException("El cliente con id " + authUserId + " está dado de baja y no puede operar.");
+            }
+            // Actualizar última actividad
+            client.setLastActivityDate(java.time.LocalDate.now());
+            personRepository.save(client);
+        } else {
+            throw new IllegalStateException("El usuario con authUserId " + authUserId + " no es un cliente interesado.");
         }
     }
 
