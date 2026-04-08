@@ -46,7 +46,39 @@ spring:
           predicates:
             - Path=/api/calendar/**, /api/visits/**, /api/visit-requests/**
           filters:
-            - StripPrefix=0
+            - AuthenticationFilter
+        # POST /api/visits/{id}/reassignment → Solicitar reasignación
+        - id: request-reassignment
+          uri: lb://visit-calendar-service
+          predicates:
+            - Path=/api/visits/*/reassignment
+            - Method=POST
+          filters:
+            - AuthenticationFilter   # Valida JWT y agrega X-User-Id al header
+        # PUT /api/reassignments/{id}/reply → Aceptar / Rechazar
+        - id: reply-reassignment
+          uri: lb://visit-calendar-service
+          predicates:
+            - Path=/api/reassignments/*/reply
+            - Method=PUT
+          filters:
+            - AuthenticationFilter
+        # GET /api/reassignments/received → Bandeja de solicitudes
+        - id: received-reassignments
+          uri: lb://visit-calendar-service
+          predicates:
+            - Path=/api/reassignments/received
+            - Method=GET
+          filters:
+            - AuthenticationFilter
+        # GET /api/reassignments/pending/count → Badge de notificación
+        - id: count-pending-reassignments
+          uri: lb://visit-calendar-service
+          predicates:
+            - Path=/api/reassignments/pending/count
+            - Method=GET
+          filters:
+            - AuthenticationFilter
         - id: favorites-route
           uri: lb://USER-SERVICE
           predicates:
