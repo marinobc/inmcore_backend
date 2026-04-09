@@ -63,6 +63,15 @@ public class PropertyController {
         return propertyService.findById(id);
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public PropertyResponse updateProperty(
+            @PathVariable String id,
+            @Valid @RequestBody PropertyRequest request,
+            @RequestHeader("X-Auth-User-Id") String adminId) {
+        return propertyService.updateProperty(id, request, adminId);
+    }
+
     // --- WRITE OPERATIONS (PROPERTY AGGREGATE) ---
 
     @PostMapping

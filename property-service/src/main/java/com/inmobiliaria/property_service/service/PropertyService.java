@@ -20,6 +20,7 @@ import com.inmobiliaria.property_service.exception.ResourceNotFoundException;
 import com.inmobiliaria.property_service.exception.ValidationException;
 import com.inmobiliaria.property_service.repository.PropertyRepository;
 
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -334,6 +335,39 @@ public class PropertyService {
         prop.setUpdatedAt(Instant.now());
 
         return mapToResponse(propertyRepository.save(prop));
+    }
+
+    public PropertyResponse updateProperty(String id, PropertyRequest request, String adminId) {
+        PropertyDocument property = propertyRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Property not found: " + id));
+        
+        Double currentPrice = property.getPrice();
+        
+        property.setTitle(request.title());
+        property.setAddress(request.address());
+        property.setType(request.type());
+        property.setM2(request.m2());
+        property.setRooms(request.rooms());
+        property.setOperationType(request.operationType());
+        
+        if (request.ownerId() != null && !request.ownerId().isBlank()) {
+            property.setOwnerId(request.ownerId());
+        }
+        
+        property.setUpdatedAt(Instant.now());
+        property.setCreatedBy(adminId);
+        
+        propertyRepository.save(property);
+        
+        if (request.price() != null && !request.price().equals(currentPrice)) {
+            updatePrice(id, request.price(), adminId);
+            log.info("Price updated for property {} from {} to {} by admin {}", 
+                    id, currentPrice, request.price(), adminId);
+        }
+        
+        log.info("Property {} updated by admin {}", id, adminId);
+        
+        return mapToResponse(propertyRepository.findById(id).orElseThrow());
     }
 
     public void validateAvailabilityForAction(String id) {
