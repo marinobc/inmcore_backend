@@ -19,7 +19,7 @@ import com.inmobiliaria.property_service.exception.AccessDeniedException;
 import com.inmobiliaria.property_service.exception.ResourceNotFoundException;
 import com.inmobiliaria.property_service.exception.ValidationException;
 import com.inmobiliaria.property_service.repository.PropertyRepository;
-
+import com.inmobiliaria.property_service.security.Auditable;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -321,6 +321,7 @@ public class PropertyService {
         return mapToResponse(propertyRepository.findById(propertyId).orElseThrow());
     }
 
+    @Auditable(action = "PROPERTY_DELETE")
     public void deleteProperty(String id, String adminId) {
         PropertyDocument property = propertyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Inmueble no encontrado: " + id));

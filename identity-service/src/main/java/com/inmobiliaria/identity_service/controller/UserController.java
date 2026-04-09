@@ -58,6 +58,12 @@ public class UserController {
         return userService.deactivate(id);
     }
 
+    @PutMapping("/{id}/reactivate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public UserResponse reactivate(@PathVariable String id) {
+        return userService.reactivate(id);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
