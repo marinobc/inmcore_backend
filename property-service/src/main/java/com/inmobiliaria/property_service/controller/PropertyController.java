@@ -30,6 +30,15 @@ public class PropertyController {
         return propertyService.findByAgent(agentId);
     }
 
+    @PatchMapping("/{id}/agent-update")
+    @PreAuthorize("hasRole('AGENT')")
+    public PropertyResponse updatePropertyAsAgent(
+            @PathVariable String id,
+            @Valid @RequestBody AgentPropertyUpdateRequest request,
+            @RequestHeader("X-Auth-User-Id") String agentId) {
+        return propertyService.updatePropertyAsAgent(id, request, agentId);
+    }
+
     @GetMapping
     public Map<String, Object> findAll(
             @RequestParam(required = false) String title,

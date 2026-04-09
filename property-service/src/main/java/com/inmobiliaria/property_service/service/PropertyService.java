@@ -111,6 +111,40 @@ public class PropertyService {
         return result;
     }
 
+    public PropertyResponse updatePropertyAsAgent(String id, AgentPropertyUpdateRequest request, String agentId) {
+        PropertyDocument property = propertyRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Property not found: " + id));
+        
+        // Verify the agent is assigned to this property
+        boolean isAssignedAgent = property.getAssignedAgentId() != null 
+                && property.getAssignedAgentId().equals(agentId);
+        
+        if (!isAssignedAgent) {
+            throw new AccessDeniedException("You can only update properties assigned to you");
+        }
+        
+        // Update allowed fields (price is NOT included)
+        property.setTitle(request.title());
+        property.setAddress(request.address());
+        property.setType(request.type());
+        property.setM2(request.m2());
+        property.setRooms(request.rooms());
+        property.setOperationType(request.operationType());
+        
+        if (request.ownerId() != null && !request.ownerId().isBlank()) {
+            property.setOwnerId(request.ownerId());
+        }
+        
+        property.setUpdatedAt(Instant.now());
+        property.setCreatedBy(agentId);
+        
+        propertyRepository.save(property);
+        
+        log.info("Property {} updated by agent {}", id, agentId);
+        
+        return mapToResponse(propertyRepository.findById(id).orElseThrow());
+    }
+
     public List<PropertyResponse> findAll() {
         return propertyRepository.findAll().stream().map(this::mapToResponse).toList();
     }
