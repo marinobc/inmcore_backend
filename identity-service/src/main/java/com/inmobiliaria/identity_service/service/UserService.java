@@ -58,7 +58,7 @@ public class UserService {
         // Si es un agente (tiene rol AGENT)
         if (currentRoles.contains("AGENT")) {
             // Solo puede crear clientes interesados
-            if (request.userType() != UserType.INTERESTED_CLIENT) {
+            if (request.userType() != UserType.INTERESTED_CLIENT && request.userType() != UserType.OWNER) {
                 throw new UnauthorizedException("Agents can only create INTERESTED_CLIENT users");
             }
             // El assignedAgentId debe coincidir con el ID del agente autenticado
