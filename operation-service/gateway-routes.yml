@@ -1,0 +1,39 @@
+# ============================================================
+# Add these routes to: api-gateway/src/main/resources/application.yml
+# Inside the spring.cloud.gateway.routes list.
+# ============================================================
+# Operation Service — port 8087, registered in Eureka as "operation-service"
+# ============================================================
+
+# POST /api/operations/{id}/receipts → Attach receipt (multipart)
+- id: operation-receipt-attach
+  uri: lb://operation-service
+  predicates:
+    - Path=/api/operations/*/receipts
+    - Method=POST
+  filters:
+    - AuthenticationFilter
+
+# GET /api/operations/{id}/receipts → List receipts
+- id: operation-receipt-list
+  uri: lb://operation-service
+  predicates:
+    - Path=/api/operations/*/receipts
+    - Method=GET
+  filters:
+    - AuthenticationFilter
+
+# DELETE /api/operations/{id}/receipts/{receiptId} → Delete receipt
+- id: operation-receipt-delete
+  uri: lb://operation-service
+  predicates:
+    - Path=/api/operations/*/receipts/*
+    - Method=DELETE
+  filters:
+    - AuthenticationFilter
+# ============================================================
+# Also add the service to the run order in Utils/services-launcher/run.py
+# after user-service (port 8084) and visit-calendar-service (port 8085):
+#
+#   {"name": "operation-service", "port": 8087, "path": "operation-service"}
+# ============================================================

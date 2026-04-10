@@ -31,7 +31,7 @@ spring:
             - AuthenticationFilter
         - id: property-service
           uri: lb://PROPERTY-SERVICE
-          predicates: 
+          predicates:
             - Path=/properties/**,/properties,/documents/**,/documents
           filters:
             - AuthenticationFilter
@@ -54,7 +54,7 @@ spring:
             - Path=/api/visits/*/reassignment
             - Method=POST
           filters:
-            - AuthenticationFilter   # Valida JWT y agrega X-User-Id al header
+            - AuthenticationFilter # Valida JWT y agrega X-User-Id al header
         # PUT /api/reassignments/{id}/reply → Aceptar / Rechazar
         - id: reply-reassignment
           uri: lb://visit-calendar-service
@@ -85,6 +85,30 @@ spring:
             - Path=/api/favoritos/**
           filters:
             - AuthenticationFilter
+        # POST /api/operations/{id}/receipts → Attach receipt (multipart)
+        - id: operation-receipt-attach
+          uri: lb://operation-service
+          predicates:
+            - Path=/api/operations/*/receipts
+            - Method=POST
+          filters:
+            - AuthenticationFilter
+        # GET /api/operations/{id}/receipts → List receipts
+        - id: operation-receipt-list
+          uri: lb://operation-service
+          predicates:
+            - Path=/api/operations/*/receipts
+            - Method=GET
+          filters:
+            - AuthenticationFilter
+        # DELETE /api/operations/{id}/receipts/{receiptId} → Delete receipt
+        - id: operation-receipt-delete
+          uri: lb://operation-service
+          predicates:
+            - Path=/api/operations/*/receipts/*
+            - Method=DELETE
+          filters:
+            - AuthenticationFilter
 
 eureka:
   client:
@@ -97,4 +121,4 @@ eureka:
 logging:
   level:
     root: ERROR
-    '[com.inmobiliaria.api_gateway]': DEBUG
+    "[com.inmobiliaria.api_gateway]": DEBUG

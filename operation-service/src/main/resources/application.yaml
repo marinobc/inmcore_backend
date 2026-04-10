@@ -1,0 +1,45 @@
+server:
+  port: 8087
+
+spring:
+  application:
+    name: operation-service
+
+  data:
+    mongodb:
+      uri: mongodb://admin:admin@localhost:27017/inmobiliaria_db?authSource=admin
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB # Maximum size per uploaded file
+      max-request-size: 12MB # Maximum total request size
+
+# Eureka — register with the existing service-registry (port 8761)
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    hostname: localhost
+    prefer-ip-address: true
+
+# MinIO configuration
+minio:
+  endpoint: http://localhost:9000
+  access-key: minioadmin # Change in production
+  secret-key: minioadmin # Change in production
+  bucket-name: operations-payment-receipts # Bucket is auto-created on startup if it does not exist
+
+# File upload constraints (enforced in ReceiptService)
+receipt:
+  upload:
+    allowed-types: application/pdf,image/jpeg,image/png,image/webp
+    max-size-bytes: 10485760 # 10 MB in bytes
+
+logging:
+  level:
+    root: ERROR
+    "[com.inmobiliaria.operation_service]": DEBUG

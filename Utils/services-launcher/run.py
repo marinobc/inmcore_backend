@@ -12,9 +12,10 @@
 ║  │   ├── access-control-service/ (order 3)                           ║
 ║  │   ├── identity-service/ (order 4)                                 ║
 ║  │   ├── notification-service/ (order 5)                             ║
-║  │   └── visit-calendar-service/ (order 8)                           ║
+║  │   ├── visit-calendar-service/ (order 8)                           ║
+║  │   └── operation-service/ (order 9)                                ║
 ║  └── Frontend/                       ← browse to this                ║
-║      └── package.json  (npm run dev, order 9)                        ║
+║      └── package.json  (npm run dev, order 10)                       ║
 ║                                                                      ║
 ║  Adding a new microservice                                           ║
 ║  ─────────────────────────                                           ║
