@@ -1,329 +1,129 @@
 # Backend - TD Inmobiliaria
 
-Este repositorio contiene el backend del proyecto TD Inmobiliaria, implementado con una arquitectura de **microservicios** utilizando **Spring Boot** y **Java 21**. El sistema está diseñado para gestionar propiedades, usuarios, roles, autenticación, visitas y notificaciones de manera escalable y modular.
+Este repositorio contiene el núcleo del sistema TD Inmobiliaria, una plataforma basada en **microservicios** desarrollada con **Java 21** y **Spring Boot 3.5**. El sistema emplea una arquitectura distribuida para gestionar de forma eficiente el ciclo de vida inmobiliario, desde la publicación de propiedades hasta la gestión de cierres y recibos de pago.
 
-## Estructura del Proyecto
+## Estructura de Microservicios
 
-El backend está compuesto por **8 microservicios principales** y utilidades de soporte:
+El ecosistema se divide en **9 servicios independientes** que se comunican entre sí y se registran dinámicamente:
 
-```
+```text
 Backend/
-├── access-control-service  # Servicio de gestión de roles y permisos
-├── api-gateway             # Punto de entrada único con validación JWT
-├── identity-service        # Servicio de autenticación y generación de tokens
-├── notification-service    # Servicio de notificaciones por email
-├── property-service        # Servicio de gestión de propiedades
-├── service-registry        # Servicio de descubrimiento Eureka
-├── user-service            # Servicio de gestión de información de personas/usuarios
-├── visit-calendar-service  # Servicio de gestión de visitas y calendario
-├── Utils/                  # Utilidades y scripts de soporte
-│   ├── mongo bd.md         # Contiene el comando para instalar MongoDB
-│   ├── mailhog.md          # Contiene el comando para instalar MailHog
-│   ├── MongoDB Semilla.py  # Script para sembrar datos iniciales
-│   └── services-launcher/  # Lanzador automatizado de servicios
-│       └── run.py          # Script Python para iniciar todos los servicios
-└── README.md
+├── access-control-service    # Gestión de roles, permisos granulares y caché (Caffeine)
+├── api-gateway               # Punto de entrada, enrutamiento dinámico y filtro JWT
+├── identity-service          # Autenticación, JWT, ciclo de vida de credenciales y auditoría
+├── notification-service      # Motor de mensajería (Email) para credenciales y alertas
+├── operation-service         # Gestión de cierres de venta y recibos de pago (MinIO)
+├── property-service          # Inventario, imágenes, documentos legales y políticas de acceso
+├── service-registry          # Servidor de descubrimiento (Netflix Eureka)
+├── user-service              # Perfiles de personas (Agentes, Clientes, Dueños) y Favoritos
+└── visit-calendar-service    # Agenda, gestión de visitas y flujo de reasignación
 ```
 
-## Propósito de cada Microservicio
+---
+
+## Detalle de los Microservicios
 
 ### 1. **service-registry** (Puerto: 8761)
-**Servicio de Descubrimiento** - Eureka Server
-
-**Función:** Permite que todos los microservicios se registren y se descubran entre sí dinámicamente.
+Servidor **Eureka** que permite el registro y localización de servicios sin necesidad de hardcodear direcciones IP, facilitando el escalamiento.
 
 ### 2. **api-gateway** (Puerto: 8080)
-**API Gateway** - Spring Cloud Gateway
-
-**Función:** Actúa como proxy inverso, enruta las peticiones a los microservicios correspondientes y valida los tokens JWT antes de permitir el acceso.
+Basado en **Spring Cloud Gateway**. Implementa un `AuthenticationFilter` que valida los tokens JWT contra el servicio de identidad y propaga el contexto del usuario (`X-Auth-User-Id`, `X-Auth-Roles`) a los servicios internos.
 
 ### 3. **identity-service** (Puerto: 8081)
-**Servicio de Identidad** - Gestión de Autenticación
-
-**Función:** 
-- Endpoint `POST /auth/login` para autenticación de usuarios
-- Generación y validación de tokens JWT
-- Gestión de sesiones y cambio de contraseña
+Gestiona la seguridad centralizada.
+- Generación de Access Tokens y Refresh Tokens.
+- Control de contraseñas temporales y cambios obligatorios.
+- **Auditoría AOP**: Registra cada inicio de sesión y cambio de credenciales.
 
 ### 4. **access-control-service** (Puerto: 8082)
-**Servicio de Control de Acceso** - Roles y Permisos
-
-**Función:**
-- Gestión de roles (Administrador, Agente, Cliente, Propietario)
-- Catálogo de permisos granulares por recurso/acción
-- Asignación de roles a usuarios
+Maneja la lógica de RBAC (Control de Acceso Basado en Roles).
+- Define catálogos de permisos (Recurso + Acción + Scope).
+- Utiliza **Caffeine Cache** para optimizar la validación de permisos en tiempo real.
 
 ### 5. **notification-service** (Puerto: 8083)
-**Servicio de Notificaciones** - Emails
+Encargado del envío de correos electrónicos mediante SMTP.
+- Notifica credenciales a nuevos usuarios.
+- Alertas de solicitudes de visita y reasignaciones.
 
-**Función:**
-- Envío de credenciales temporales a nuevos usuarios
-- Notificaciones por email
-- Registro de logs de envío
+### 6. **user-service** (Puerto: 8084)
+Almacena la información extendida de los usuarios.
+- Diferenciación por tipo: **Admin, Employee (Agent), Owner, Interested Client**.
+- Gestión de **Favoritos** con historial de acciones (Added/Removed).
+- Lógica de baja lógica para clientes inactivos.
 
-### 6. **property-service** (Puerto: 8085)
-**Servicio de Propiedades** - Gestión Inmobiliaria
-
-**Función:**
-- CRUD completo de propiedades
-- Historial de precios y asignaciones
-- Asignación de agentes a propiedades
-- Control de acceso basado en permisos
-
-### 7. **user-service** (Puerto: 8084)
-**Servicio de Usuarios** - Gestión de Datos de Personas
-
-**Función:**
-- Gestión de perfiles: Administradores, Empleados, Propietarios y Clientes Interesados
-- Registro y actualización de información personal
-- Asociación con IDs de autenticación del identity-service
-- Consulta de perfiles por tipo o ID
+### 7. **property-service** (Puerto: 8085)
+El corazón del inventario.
+- CRUD de propiedades con historial de precios y cambios de estado.
+- **Gestión Multimedia**: Integración con **MinIO** para subida de imágenes y contratos mediante URLs prefirmadas.
+- Políticas de acceso específicas por propiedad.
 
 ### 8. **visit-calendar-service** (Puerto: 8086)
-**Servicio de Visitas** - Agenda y Calendario
+Gestiona la interacción cliente-agente.
+- Sistema de solicitudes de visita con detección de conflictos de horario.
+- **Flujo de Reasignación**: Permite a un agente solicitar que otro tome su visita, con sistema de aceptación/rechazo.
 
-**Función:**
-- Gestión de solicitudes de visita a propiedades
-- Creación de eventos de calendario
-- Validación de conflictos de horarios
-- Notificaciones de confirmación
+### 9. **operation-service** (Puerto: 8087)
+Gestiona el proceso de cierre y pagos.
+- **Gestión de Recibos**: Almacenamiento seguro de comprobantes de pago en **MinIO**.
+- Registro de operaciones comerciales vinculadas a propiedades y clientes.
 
-## Tecnologías Utilizadas
+---
 
-- **Java 21 (Temurin)** - Versión LTS recomendada
-- **Spring Boot 3.x** - Framework principal
-- **Spring Cloud** - Para microservicios y descubrimiento
-- **Maven** - Gestión de dependencias
-- **MongoDB** - Base de datos NoSQL
-- **JWT** - Autenticación basada en tokens
-- **Python 3.12** - Scripts de utilidad
+## Tecnologías Principales
 
-## Requisitos Previos
+* **Java 21** (Runtime)
+* **Spring Boot 3.5.13** & **Spring Cloud 2025.0.1**
+* **MongoDB**: Base de datos principal para todos los servicios.
+* **MinIO**: Almacenamiento de objetos (S3 compatible) para documentos y fotos.
+* **JWT (io.jsonwebtoken)**: Para seguridad y stateless auth.
+* **OpenFeign**: Comunicación inter-servicio síncrona.
+* **Lombok**: Reducción de código boilerplate.
 
-```bash
-# Bash / Linux / macOS
-java --version  # OpenJDK 21.0.10 o superior
-mvn --version   # Apache Maven 3.8.7 o superior
-python3 --version  # Python 3.12.3 o superior
-docker --version  # Para MongoDB (opcional)
+---
 
-# Windows (CMD)
-java --version
-mvn --version
-python --version
-docker --version
-```
+## Configuración y Ejecución
 
-## Configuración Inicial
+### Requisitos Previos
+* **JDK 21** o superior.
+* **Maven 3.9+**.
+* **MongoDB** corriendo en `localhost:27017`.
+* **MinIO** corriendo en `localhost:9000` (con buckets: `properties`, `property-images`, `documents`, `operations-payment-receipts`).
+* **MailHog** (opcional para pruebas de correo) en puerto `1025`.
 
-### 1. Clonar el repositorio
+### Pasos para iniciar (Orden Recomendado)
 
-```bash
-# Bash / Linux / macOS
-git clone https://github.com/OsquiMenacho28/Group-C_Droca-Inmob_Backend.git
-cd Group-C_Droca-Inmob_Backend
+1.  **Service Registry**:
+    ```bash
+    cd service-registry && mvn spring-boot:run
+    ```
+2.  **API Gateway**:
+    ```bash
+    cd api-gateway && mvn spring-boot:run
+    ```
+3.  **Servicios de Soporte**:
+    * `identity-service`
+    * `access-control-service`
+    * `user-service`
+4.  **Servicios de Negocio**:
+    * `property-service`
+    * `visit-calendar-service`
+    * `operation-service`
+    * `notification-service`
 
-# Windows (CMD)
-git clone https://github.com/OsquiMenacho28/Group-C_Droca-Inmob_Backend.git
-cd Group-C_Droca-Inmob_Backend
-```
+---
 
-### 2. Configurar MongoDB
+## Endpoints de Interés (vía Gateway)
 
-**Si tienes Docker:**
-```bash
-# El comando exacto está en Utils/mongo bd.md
+| Servicio | Ruta Base | Acción Principal |
+| :--- | :--- | :--- |
+| **Auth** | `/auth/login` | Inicio de sesión y obtención de JWT |
+| **Users** | `/persons` | Gestión de perfiles y roles |
+| **Properties** | `/properties` | Búsqueda y registro de inmuebles |
+| **Calendar** | `/api/calendar` | Visualización de agenda |
+| **Operations** | `/api/operations` | Registro de cierres y recibos |
 
-# En Linux/macOS:
-cat Utils/mongo\ bd.md
+## Notas de Desarrollo
 
-# En Windows (CMD):
-type Utils\mongo bd.md
-```
-
-**Si no tienes Docker:**
-Busca cómo instalar MongoDB en tu sistema operativo y, en caso de ser muy complicado, solicita ayuda al equipo.
-
-### 3. Configurar MailHog (para pruebas de email)
-
-**Si tienes Docker:**
-```bash
-# El comando exacto está en Utils/mailhog.md
-
-# En Linux/macOS:
-cat Utils/mailhog.md
-
-# En Windows (CMD):
-type Utils\mailhog.md
-```
-
-**Si no tienes Docker:**
-MailHog es una herramienta para probar envíos de email en entorno de desarrollo. Puedes descargarlo desde https://github.com/mailhog/MailHog/releases o solicitar ayuda al equipo.
-
-### 4. Sembrar datos iniciales
-
-```bash
-# Bash / Linux / macOS
-cd Utils
-pip install pymongo bcrypt
-python3 "MongoDB Semilla.py"
-
-# Windows (CMD)
-cd Utils
-pip install pymongo bcrypt
-python "MongoDB Semilla.py"
-```
-
-## Usuarios de Prueba
-
-### 👑 Master Admin
-```
-Email: admin@admin
-Contraseña: admin
-```
-
-### 👤 Usuarios de Prueba (todos con contraseña: `password`)
-
-| Rol | Email |
-|-----|-------|
-| **Administradores** | `admin1@admin`, `admin2@admin` |
-| **Agentes** | `agent1@user`, `agent2@user` |
-| **Propietarios** | `owner1@user`, `owner2@user` |
-| **Clientes** | `client1@user`, `client2@user` |
-| **Supervisor** | `supervisor1@user` |
-| **Visualizador** | `viewer1@user` |
-
-## Ejecución de los Microservicios
-
-### Opción 1: Iniciar manualmente (respetar orden)
-
-**Bash / Linux / macOS:**
-```bash
-# Terminal 1 - Service Registry (Eureka)
-cd service-registry
-mvn clean spring-boot:run
-
-# Terminal 2 - API Gateway
-cd ../api-gateway
-mvn clean spring-boot:run
-
-# Terminal 3 - Identity Service
-cd ../identity-service
-mvn clean spring-boot:run
-
-# Terminal 4 - Access Control Service
-cd ../access-control-service
-mvn clean spring-boot:run
-
-# Terminal 5 - Notification Service
-cd ../notification-service
-mvn clean spring-boot:run
-
-# Terminal 6 - User Service
-cd ../user-service
-mvn clean spring-boot:run
-
-# Terminal 7 - Property Service
-cd ../property-service
-mvn clean spring-boot:run
-
-# Terminal 8 - Visit Calendar Service
-cd ../visit-calendar-service
-mvn clean spring-boot:run
-```
-
-**Windows (CMD):**
-```cmd
-REM Terminal 1 - Service Registry (Eureka)
-cd service-registry
-mvn clean spring-boot:run
-
-REM Terminal 2 - API Gateway
-cd ../api-gateway
-mvn clean spring-boot:run
-
-REM Terminal 3 - Identity Service
-cd ../identity-service
-mvn clean spring-boot:run
-
-REM Terminal 4 - Access Control Service
-cd ../access-control-service
-mvn clean spring-boot:run
-
-REM Terminal 5 - Notification Service
-cd ../notification-service
-mvn clean spring-boot:run
-
-REM Terminal 6 - User Service
-cd ../user-service
-mvn clean spring-boot:run
-
-REM Terminal 7 - Property Service
-cd ../property-service
-mvn clean spring-boot:run
-
-REM Terminal 8 - Visit Calendar Service
-cd ../visit-calendar-service
-mvn clean spring-boot:run
-```
-
-### Opción 2: Usar el lanzador automático (requiere Python)
-
-```bash
-# Bash / Linux / macOS
-cd Utils/services-launcher
-python3 run.py
-
-# Windows (CMD)
-cd Utils/services-launcher
-python run.py
-```
-
-Este script iniciará todos los servicios en el orden correcto automáticamente.
-
-## Puertos y Endpoints
-
-| Servicio | Puerto | URL Base | Descripción |
-|----------|--------|----------|-------------|
-| service-registry | 8761 | http://localhost:8761 | Dashboard Eureka |
-| api-gateway | 8080 | http://localhost:8080 | Punto de entrada único |
-| identity-service | 8081 | http://localhost:8081 | Autenticación |
-| access-control-service | 8082 | http://localhost:8082 | Roles y permisos |
-| notification-service | 8083 | http://localhost:8083 | Notificaciones |
-| user-service | 8084 | http://localhost:8084 | Gestión de usuarios |
-| property-service | 8085 | http://localhost:8085 | Gestión de propiedades |
-| visit-calendar-service | 8086 | http://localhost:8086 | Visitas y calendario |
-| MailHog UI | 8025 | http://localhost:8025 | Interfaz web de emails de prueba |
-
-## Endpoints Principales del API Gateway
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| POST | `/auth/login` | Autenticación de usuario |
-| POST | `/auth/change-password` | Cambio de contraseña |
-| GET | `/users/me` | Obtener usuario actual |
-| GET | `/roles` | Listar roles disponibles |
-| GET | `/properties` | Listar propiedades |
-| POST | `/properties` | Crear propiedad (Admin/Agente) |
-| GET | `/persons` | Listar personas |
-| GET | `/api/calendar/events` | Obtener eventos de calendario |
-| POST | `/api/visits` | Solicitar visita |
-
-## Extensiones Recomendadas para VS Code
-
-- **[Extension Pack for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack)**: Soporte completo para Java
-- **[Spring Boot Extension Pack](https://marketplace.visualstudio.com/items?itemName=vmware.vscode-boot-dev-pack)**: Herramientas para Spring Boot
-- **[Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python)**: Para scripts de utilidad
-- **[REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client)**: Probar APIs directamente desde VS Code
-- **[MongoDB for VS Code](https://marketplace.visualstudio.com/items?itemName=mongodb.mongodb-vscode)**: Explorar bases de datos MongoDB
-
-## Notas Importantes
-
-1. **Orden de inicio**: Siempre iniciar `service-registry` primero, luego `api-gateway`, y después los demás servicios
-2. **MongoDB**: Asegúrate de que MongoDB esté corriendo antes de ejecutar cualquier servicio
-3. **MailHog**: Útil para ver los emails enviados por el sistema en desarrollo sin necesidad de configurar un servidor SMTP real
-4. **Tokens JWT**: El API Gateway valida todos los tokens, excepto endpoints públicos como `/auth/login`
-5. **Logs**: Cada servicio genera logs en su propia consola; usa el lanzador para ver todos en una sola ventana
-6. **Usuarios de prueba**: Los usuarios listados están disponibles después de ejecutar el script de semilla
-7. **Property Service**: Requiere que los usuarios estén registrados en identity-service y user-service para asignar agentes
-8. **Visit Calendar**: Las visitas requieren que existan propiedades y usuarios válidos
+* **Seguridad**: Todos los servicios (excepto Auth y Eureka) requieren un token Bearer válido generado por el `identity-service`.
+* **Carga de Archivos**: Las imágenes y documentos no viajan por el Gateway; se solicita una **URL prefirmada** al microservicio correspondiente y el cliente sube el archivo directamente a MinIO para optimizar el ancho de banda.
+* **Auditoría**: Los servicios de `identity`, `property` y `user` mantienen logs de auditoría en colecciones de MongoDB para rastrear cambios críticos.
