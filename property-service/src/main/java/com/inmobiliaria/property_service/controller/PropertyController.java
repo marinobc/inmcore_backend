@@ -119,7 +119,7 @@ public class PropertyController {
     }
 
     @PatchMapping("/{id}/operation-type")
-    @PreAuthorize("hasRole('ADMIN') or gasRole('AGENT')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('AGENT')")
     public PropertyResponse updateOperationType(
             @PathVariable String id,
             @Valid @RequestBody UpdateOperationTypeRequest request) {
@@ -156,5 +156,10 @@ public class PropertyController {
     @GetMapping("/{id}/responsable")
     public ResponsableResponse getResponsable(@PathVariable String id) {
         return propertyService.getResponsable(id);
+    }
+
+    @GetMapping("/owner/{ownerId}")
+    public List<PropertyResponse> findByOwner(@PathVariable String ownerId) {
+        return propertyService.findByOwner(ownerId);
     }
 }

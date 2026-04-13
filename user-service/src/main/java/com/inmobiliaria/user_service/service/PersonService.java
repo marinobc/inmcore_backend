@@ -456,6 +456,9 @@ public class PersonService {
         if (client instanceof InterestedClientDocument interested) {
             if (request.preferredContactMethod() != null) interested.setPreferredContactMethod(request.preferredContactMethod());
             if (request.budget() != null) interested.setBudget(request.budget());
+            if (request.preferredZone() != null) interested.setPreferredZone(request.preferredZone());
+            if (request.preferredPropertyType() != null) interested.setPreferredPropertyType(request.preferredPropertyType());
+            if (request.preferredRooms() != null) interested.setPreferredRooms(request.preferredRooms());
         }
 
         client.setUpdatedAt(Instant.now());
