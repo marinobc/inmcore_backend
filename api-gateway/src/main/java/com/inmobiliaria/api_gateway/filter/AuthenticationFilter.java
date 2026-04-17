@@ -39,7 +39,11 @@ public class AuthenticationFilter
           "/api/v1/auth/refresh",
           "/api/v1/auth/forgot-password",
           "/api/v1/auth/reset-password",
-          "/eureka");
+          "/eureka",
+          "/v3/api-docs",
+          "/swagger-ui",
+          "/swagger-ui.html",
+          "/webjars/swagger-ui");
 
   public AuthenticationFilter() {
     super(Config.class);
@@ -59,7 +63,8 @@ public class AuthenticationFilter
       }
 
       boolean isSecured =
-          OPEN_ENDPOINTS.stream().noneMatch(uri -> path.equals(uri) || path.startsWith(uri + "/"));
+          OPEN_ENDPOINTS.stream().noneMatch(uri -> path.equals(uri) || path.startsWith(uri + "/"))
+              && !path.contains("/v3/api-docs");
 
       if (isSecured) {
         if (!exchange.getRequest().getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {

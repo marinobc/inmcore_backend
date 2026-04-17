@@ -24,12 +24,11 @@ public class SecurityConfig {
     http.csrf(csrf -> csrf.disable())
         .authorizeHttpRequests(
             auth ->
-                auth.requestMatchers("/auth/**")
+                auth.requestMatchers(
+                        "/auth/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                     .permitAll()
                     .requestMatchers("/actuator/**")
                     .permitAll()
-                    .requestMatchers("/users/**")
-                    .authenticated()
                     .anyRequest()
                     .authenticated())
         .addFilterBefore(userContextFilter, UsernamePasswordAuthenticationFilter.class);

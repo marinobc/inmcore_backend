@@ -27,6 +27,8 @@ public record CreateUserRequest(
 
     // Owner-specific
     String taxId,
+    String address,
+    List<String> propertyIds,
 
     // InterestedClient-specific
     String preferredContactMethod,

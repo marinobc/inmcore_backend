@@ -99,11 +99,12 @@ public class UserService {
       } catch (Exception e) {
         // Si la excepción es porque el recurso no fue encontrado (404),
         // entonces podemos proceder con la creación.
-        if (e.getMessage() == null || !e.getMessage().contains("Not Found")) {
+        String msg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+        if (!msg.contains("not found") && !msg.contains("404")) {
           // Si es cualquier otra excepción, la relanzamos porque es un error inesperado.
           throw new RuntimeException("Error while verifying user by CI/NIT: " + e.getMessage(), e);
         }
-        // Si es "Not Found", el flujo continúa y el usuario se crea.
+        // Si es "not found" o "404", el flujo continúa y el usuario se crea.
       }
     }
     roleClientService.validateRoleIdsExist(request.roleIds());
@@ -148,8 +149,8 @@ public class UserService {
               request.position(),
               request.hireDate(),
               request.taxId(),
-              null,
-              null,
+              request.address(),
+              request.propertyIds(),
               request.preferredContactMethod(),
               request.budget(),
               request.assignedAgentId(),
@@ -170,10 +171,41 @@ public class UserService {
 
   @Auditable(action = "USER_UPDATE", description = "User information updated")
   public UserResponse update(String id, UpdateUserRequest request) {
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    String currentUserId = auth.getName();
+    List<String> currentRoles =
+        auth.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .map(role -> role.replace("ROLE_", ""))
+            .toList();
+
+    if (currentRoles.contains("AGENT")) {
+      if (request.assignedAgentId() != null && !request.assignedAgentId().equals(currentUserId)) {
+        throw new UnauthorizedException("You can only assign clients to yourself");
+      }
+    }
+
     UserDocument user =
         userRepository
             .findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
+
+    if (request.taxId() != null && !request.taxId().isBlank()) {
+      try {
+        Map<String, Object> personData = userServiceClient.getPersonByTaxId(request.taxId());
+        String authUserId = (String) personData.get("authUserId");
+        if (authUserId != null && !authUserId.equals(id)) {
+          throw new ResourceAlreadyExistsException(
+              "A user with CI/NIT " + request.taxId() + " already exists.");
+        }
+      } catch (Exception e) {
+        String msg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+        if (!msg.contains("not found") && !msg.contains("404")) {
+          if (e instanceof ResourceAlreadyExistsException) throw e;
+          log.warn("Non-critical error verifying taxId: {}", e.getMessage());
+        }
+      }
+    }
 
     boolean identityUpdated = false;
 
@@ -206,8 +238,14 @@ public class UserService {
             request.position(),
             request.hireDate(),
             request.taxId(),
+            request.address(),
+            request.propertyIds(),
             request.preferredContactMethod(),
-            request.budget());
+            request.budget(),
+            request.preferredZone(),
+            request.preferredPropertyType(),
+            request.preferredRooms(),
+            request.assignedAgentId());
 
     if (profileUpdate.firstName() != null
         || profileUpdate.lastName() != null
@@ -217,8 +255,14 @@ public class UserService {
         || profileUpdate.position() != null
         || profileUpdate.hireDate() != null
         || profileUpdate.taxId() != null
+        || profileUpdate.address() != null
+        || profileUpdate.propertyIds() != null
         || profileUpdate.preferredContactMethod() != null
-        || profileUpdate.budget() != null) {
+        || profileUpdate.budget() != null
+        || profileUpdate.preferredZone() != null
+        || profileUpdate.preferredPropertyType() != null
+        || profileUpdate.preferredRooms() != null
+        || profileUpdate.assignedAgentId() != null) {
 
       try {
         userServiceClient.updatePersonByAuth(id, profileUpdate);

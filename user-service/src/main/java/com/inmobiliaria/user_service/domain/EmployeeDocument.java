@@ -1,6 +1,8 @@
 package com.inmobiliaria.user_service.domain;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.data.annotation.TypeAlias;
 
@@ -16,7 +18,10 @@ public class EmployeeDocument extends PersonDocument {
   private LocalDate hireDate;
 
   // NUEVO: Lista de IDs de clientes asignados
-  private java.util.List<String> assignedClientIds = new java.util.ArrayList<>();
+  private List<String> assignedClientIds = new ArrayList<>();
+
+  // NUEVO: Lista de IDs de propietarios asignados
+  private List<String> assignedOwnerIds = new ArrayList<>();
 
   @Builder
   public EmployeeDocument(
@@ -28,12 +33,13 @@ public class EmployeeDocument extends PersonDocument {
       java.time.LocalDate birthDate,
       String phone,
       String email,
-      java.util.List<String> roleIds,
+      List<String> roleIds,
       boolean customRole,
       String department,
       String position,
       LocalDate hireDate,
-      java.util.List<String> assignedClientIds) {
+      List<String> assignedClientIds,
+      List<String> assignedOwnerIds) {
     super(
         id,
         authUserId,
@@ -49,7 +55,7 @@ public class EmployeeDocument extends PersonDocument {
     this.department = department;
     this.position = position;
     this.hireDate = hireDate;
-    this.assignedClientIds =
-        assignedClientIds != null ? assignedClientIds : new java.util.ArrayList<>();
+    this.assignedClientIds = assignedClientIds != null ? assignedClientIds : new ArrayList<>();
+    this.assignedOwnerIds = assignedOwnerIds != null ? assignedOwnerIds : new ArrayList<>();
   }
 }

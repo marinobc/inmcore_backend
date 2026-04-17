@@ -39,16 +39,16 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(ResourceNotFoundException.class)
   public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException ex) {
     log.warn("Resource not found: {}", ex.getMessage());
-
-    // Security optimization: If a user is not found during login, we return 401 Unauthorized
-    // to avoid leaking which emails exist in the system.
-    if (ex.getMessage().contains("User not found")) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-          .body(responseFactory.unauthorized("Invalid credentials"));
-    }
-
     return ResponseEntity.status(HttpStatus.NOT_FOUND)
         .body(responseFactory.notFound(ex.getMessage()));
+  }
+
+  @ExceptionHandler(InvalidCredentialsException.class)
+  public ResponseEntity<ApiResponse<Void>> handleInvalidCredentials(
+      InvalidCredentialsException ex) {
+    log.warn("Invalid credentials: {}", ex.getMessage());
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+        .body(responseFactory.unauthorized(ex.getMessage()));
   }
 
   @ExceptionHandler(ResourceAlreadyExistsException.class)

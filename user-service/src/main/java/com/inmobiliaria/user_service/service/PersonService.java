@@ -11,10 +11,20 @@ import java.util.stream.Stream;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import com.inmobiliaria.user_service.client.AccessControlClient;
-import com.inmobiliaria.user_service.domain.*;
+import com.inmobiliaria.user_service.domain.AdminDocument;
+import com.inmobiliaria.user_service.domain.AuditEntry;
+import com.inmobiliaria.user_service.domain.AuditLogDocument;
+import com.inmobiliaria.user_service.domain.EmployeeDocument;
+import com.inmobiliaria.user_service.domain.InterestedClientDocument;
+import com.inmobiliaria.user_service.domain.OwnerDocument;
+import com.inmobiliaria.user_service.domain.PersonDocument;
+import com.inmobiliaria.user_service.domain.PersonType;
 import com.inmobiliaria.user_service.dto.request.CreateInterestedClientRequest;
 import com.inmobiliaria.user_service.dto.request.CreatePersonRequest;
 import com.inmobiliaria.user_service.dto.request.UpdatePersonRequest;
@@ -35,6 +45,7 @@ public class PersonService {
   private final PersonRepository personRepository;
   private final AccessControlClient accessControlClient;
   private final AuditLogRepository auditLogRepository;
+  private final MongoTemplate mongoTemplate;
 
   public PersonResponse create(CreatePersonRequest request) {
     log.info("Creating person profile for authUserId: {}", request.authUserId());
@@ -133,22 +144,35 @@ public class PersonService {
             .changes(null)
             .build());
 
-    // --- ASIGNAR CLIENTE AL AGENTE SI SE PROPORCIONÓ assignedAgentId ---
-    if (request.assignedAgentId() != null && request.personType() == PersonType.INTERESTED_CLIENT) {
+    // --- ASIGNAR CLIENTE/PROPIETARIO AL AGENTE SI SE PROPORCIONÓ assignedAgentId ---
+    if (request.assignedAgentId() != null
+        && (request.personType() == PersonType.INTERESTED_CLIENT
+            || request.personType() == PersonType.OWNER)) {
       Optional<EmployeeDocument> agentOpt =
           personRepository.findEmployeeByAuthUserId(request.assignedAgentId());
       if (agentOpt.isEmpty()) {
         log.warn(
-            "Agent EmployeeDocument not found for authUserId: {}. Client created without assignment.",
+            "Agent EmployeeDocument not found for authUserId: {}. Person created without assignment.",
             request.assignedAgentId());
       } else {
         EmployeeDocument agent = agentOpt.get();
-        if (agent.getAssignedClientIds() == null) {
-          agent.setAssignedClientIds(new ArrayList<>());
+        if (request.personType() == PersonType.INTERESTED_CLIENT) {
+          if (agent.getAssignedClientIds() == null) {
+            agent.setAssignedClientIds(new ArrayList<>());
+          }
+          if (!agent.getAssignedClientIds().contains(saved.getId())) {
+            agent.getAssignedClientIds().add(saved.getId());
+          }
+        } else {
+          if (agent.getAssignedOwnerIds() == null) {
+            agent.setAssignedOwnerIds(new ArrayList<>());
+          }
+          if (!agent.getAssignedOwnerIds().contains(saved.getId())) {
+            agent.getAssignedOwnerIds().add(saved.getId());
+          }
         }
-        agent.getAssignedClientIds().add(saved.getId());
         personRepository.save(agent);
-        log.info("Client {} assigned to agent {}", saved.getId(), agent.getId());
+        log.info("{} {} assigned to agent {}", request.personType(), saved.getId(), agent.getId());
       }
     }
 
@@ -222,6 +246,14 @@ public class PersonService {
         personRepository
             .findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Person not found with id: " + id));
+
+    if (request.taxId() != null && !request.taxId().isBlank()) {
+      Optional<PersonDocument> existing = personRepository.findByTaxId(request.taxId());
+      if (existing.isPresent() && !existing.get().getId().equals(id)) {
+        throw new ResourceAlreadyExistsException(
+            "A person with CI/NIT " + request.taxId() + " already exists.");
+      }
+    }
 
     List<AuditEntry.FieldChange> changes = new ArrayList<>();
 
@@ -303,14 +335,77 @@ public class PersonService {
                 .build());
         owner.setTaxId(request.taxId());
       }
+      if (request.address() != null && !request.address().equals(owner.getAddress())) {
+        changes.add(
+            AuditEntry.FieldChange.builder()
+                .field("address")
+                .oldValue(owner.getAddress())
+                .newValue(request.address())
+                .build());
+        owner.setAddress(request.address());
+      }
+      if (request.propertyIds() != null && !request.propertyIds().equals(owner.getPropertyIds())) {
+        changes.add(
+            AuditEntry.FieldChange.builder()
+                .field("propertyIds")
+                .oldValue(owner.getPropertyIds() != null ? owner.getPropertyIds().toString() : null)
+                .newValue(request.propertyIds().toString())
+                .build());
+        owner.setPropertyIds(request.propertyIds());
+      }
     } else if (person instanceof InterestedClientDocument client) {
-      if (request.preferredContactMethod() != null)
+      if (request.preferredContactMethod() != null
+          && !request.preferredContactMethod().equals(client.getPreferredContactMethod())) {
+        changes.add(
+            AuditEntry.FieldChange.builder()
+                .field("preferredContactMethod")
+                .oldValue(client.getPreferredContactMethod())
+                .newValue(request.preferredContactMethod())
+                .build());
         client.setPreferredContactMethod(request.preferredContactMethod());
-      if (request.budget() != null) client.setBudget(request.budget());
-      if (request.preferredZone() != null) client.setPreferredZone(request.preferredZone());
-      if (request.preferredPropertyType() != null)
+      }
+      if (request.budget() != null && !request.budget().equals(client.getBudget())) {
+        changes.add(
+            AuditEntry.FieldChange.builder()
+                .field("budget")
+                .oldValue(client.getBudget())
+                .newValue(request.budget())
+                .build());
+        client.setBudget(request.budget());
+      }
+      if (request.preferredZone() != null
+          && !request.preferredZone().equals(client.getPreferredZone())) {
+        changes.add(
+            AuditEntry.FieldChange.builder()
+                .field("preferredZone")
+                .oldValue(client.getPreferredZone())
+                .newValue(request.preferredZone())
+                .build());
+        client.setPreferredZone(request.preferredZone());
+      }
+      if (request.preferredPropertyType() != null
+          && !request.preferredPropertyType().equals(client.getPreferredPropertyType())) {
+        changes.add(
+            AuditEntry.FieldChange.builder()
+                .field("preferredPropertyType")
+                .oldValue(client.getPreferredPropertyType())
+                .newValue(request.preferredPropertyType())
+                .build());
         client.setPreferredPropertyType(request.preferredPropertyType());
-      if (request.preferredRooms() != null) client.setPreferredRooms(request.preferredRooms());
+      }
+      if (request.preferredRooms() != null
+          && !request.preferredRooms().equals(client.getPreferredRooms())) {
+        changes.add(
+            AuditEntry.FieldChange.builder()
+                .field("preferredRooms")
+                .oldValue(
+                    client.getPreferredRooms() != null
+                        ? client.getPreferredRooms().toString()
+                        : null)
+                .newValue(request.preferredRooms().toString())
+                .build());
+        client.setPreferredRooms(request.preferredRooms());
+      }
     }
 
     if (!changes.isEmpty()) {
@@ -446,6 +541,104 @@ public class PersonService {
         .collect(Collectors.toList());
   }
 
+  // --- NEW ENDPOINT 1: Agent -> Clients ---
+  public List<PersonResponse> getRelatedClientsForAgent(String agentId) {
+    java.util.Set<String> clientAuthIds = new java.util.HashSet<>();
+
+    // 1. Currently assigned to the agent (using internal _ids)
+    Optional<EmployeeDocument> agentOpt = personRepository.findEmployeeByAuthUserId(agentId);
+    if (agentOpt.isPresent()) {
+      List<String> assignedIds = agentOpt.get().getAssignedClientIds();
+      if (assignedIds != null && !assignedIds.isEmpty()) {
+        List<PersonDocument> assignedDocs = personRepository.findAllById(assignedIds);
+        assignedDocs.forEach(d -> clientAuthIds.add(d.getAuthUserId()));
+      }
+    }
+
+    // 2. Have at least one appointment with the agent (agentId in visits is authUserId)
+    Query visitQuery = new Query(Criteria.where("agentId").is(agentId));
+    visitQuery.fields().include("clientId");
+    List<org.bson.Document> visits =
+        mongoTemplate.find(visitQuery, org.bson.Document.class, "visits");
+    for (org.bson.Document v : visits) {
+      String clientId = v.getString("clientId");
+      if (clientId != null) clientAuthIds.add(clientId);
+    }
+
+    // 3. Requested appointment with the agent (visit_requests)
+    List<org.bson.Document> requests =
+        mongoTemplate.find(visitQuery, org.bson.Document.class, "visit_requests");
+    for (org.bson.Document r : requests) {
+      String clientId = r.getString("clientId");
+      if (clientId != null) clientAuthIds.add(clientId);
+    }
+
+    if (clientAuthIds.isEmpty()) return List.of();
+
+    Query query = new Query(Criteria.where("authUserId").in(clientAuthIds));
+    List<PersonDocument> allClients = mongoTemplate.find(query, PersonDocument.class, "persons");
+    return allClients.stream()
+        .filter(c -> c instanceof InterestedClientDocument)
+        .map(this::mapToResponse)
+        .collect(Collectors.toList());
+  }
+
+  // --- NEW ENDPOINT 2: Agent -> Property Owners ---
+  public List<PersonResponse> getRelatedOwnersForAgent(String agentId) {
+    java.util.Set<String> ownerAuthIds = new java.util.HashSet<>();
+
+    // 1. Directly assigned to the agent
+    Optional<EmployeeDocument> agentOpt = personRepository.findEmployeeByAuthUserId(agentId);
+    if (agentOpt.isPresent()) {
+      List<String> assignedIds = agentOpt.get().getAssignedOwnerIds();
+      if (assignedIds != null && !assignedIds.isEmpty()) {
+        List<PersonDocument> assignedDocs = personRepository.findAllById(assignedIds);
+        assignedDocs.forEach(d -> ownerAuthIds.add(d.getAuthUserId()));
+      }
+    }
+
+    // 2. Have properties assigned to the agent (assignedAgentId is authUserId)
+    Query propQuery = new Query(Criteria.where("assignedAgentId").is(agentId));
+    propQuery.fields().include("ownerId");
+    List<org.bson.Document> properties =
+        mongoTemplate.find(propQuery, org.bson.Document.class, "properties");
+    for (org.bson.Document p : properties) {
+      String ownerId = p.getString("ownerId");
+      if (ownerId != null) ownerAuthIds.add(ownerId);
+    }
+
+    // 2. Have properties with at least one appointment involving the agent
+    Query visitQuery = new Query(Criteria.where("agentId").is(agentId));
+    visitQuery.fields().include("propertyId");
+    List<org.bson.Document> visits =
+        mongoTemplate.find(visitQuery, org.bson.Document.class, "visits");
+    java.util.Set<String> propertyIdsFromVisits = new java.util.HashSet<>();
+    for (org.bson.Document v : visits) {
+      String propId = v.getString("propertyId");
+      if (propId != null) propertyIdsFromVisits.add(propId);
+    }
+
+    if (!propertyIdsFromVisits.isEmpty()) {
+      Query propsFromVisitsQuery = new Query(Criteria.where("_id").in(propertyIdsFromVisits));
+      propsFromVisitsQuery.fields().include("ownerId");
+      List<org.bson.Document> propsFromVisits =
+          mongoTemplate.find(propsFromVisitsQuery, org.bson.Document.class, "properties");
+      for (org.bson.Document p : propsFromVisits) {
+        String ownerId = p.getString("ownerId");
+        if (ownerId != null) ownerAuthIds.add(ownerId);
+      }
+    }
+
+    if (ownerAuthIds.isEmpty()) return List.of();
+
+    Query query = new Query(Criteria.where("authUserId").in(ownerAuthIds));
+    List<PersonDocument> allOwners = mongoTemplate.find(query, PersonDocument.class, "persons");
+    return allOwners.stream()
+        .filter(c -> c instanceof OwnerDocument)
+        .map(this::mapToResponse)
+        .collect(Collectors.toList());
+  }
+
   public void updateLastActivityDate(String authUserId) {
     PersonDocument person =
         personRepository
@@ -551,6 +744,59 @@ public class PersonService {
       if (request.preferredPropertyType() != null)
         interested.setPreferredPropertyType(request.preferredPropertyType());
       if (request.preferredRooms() != null) interested.setPreferredRooms(request.preferredRooms());
+    }
+
+    // --- MANEJAR REASIGNACIÓN DE AGENTE ---
+    if (request.assignedAgentId() != null) {
+      String newAgentAuthId = request.assignedAgentId();
+
+      // 1. Buscar nuevo agente
+      Optional<EmployeeDocument> newAgentOpt =
+          personRepository.findEmployeeByAuthUserId(newAgentAuthId);
+
+      if (newAgentOpt.isPresent()) {
+        EmployeeDocument newAgent = newAgentOpt.get();
+
+        // 2. Determinar si es cliente o propietario
+        boolean isClient = client instanceof InterestedClientDocument;
+        boolean isOwner = client instanceof OwnerDocument;
+
+        if (isClient || isOwner) {
+          // 3. Remover de agentes anteriores para mantener integridad
+          List<EmployeeDocument> previousAgents =
+              isClient
+                  ? personRepository.findByAssignedClientId(client.getId())
+                  : personRepository.findByAssignedOwnerId(client.getId());
+
+          for (EmployeeDocument prev : previousAgents) {
+            if (!prev.getAuthUserId().equals(newAgentAuthId)) {
+              if (isClient) {
+                prev.getAssignedClientIds().remove(client.getId());
+              } else {
+                prev.getAssignedOwnerIds().remove(client.getId());
+              }
+              personRepository.save(prev);
+            }
+          }
+
+          // 4. Agregar al nuevo agente
+          if (isClient) {
+            if (newAgent.getAssignedClientIds() == null)
+              newAgent.setAssignedClientIds(new ArrayList<>());
+            if (!newAgent.getAssignedClientIds().contains(client.getId())) {
+              newAgent.getAssignedClientIds().add(client.getId());
+            }
+          } else {
+            if (newAgent.getAssignedOwnerIds() == null)
+              newAgent.setAssignedOwnerIds(new ArrayList<>());
+            if (!newAgent.getAssignedOwnerIds().contains(client.getId())) {
+              newAgent.getAssignedOwnerIds().add(client.getId());
+            }
+          }
+          personRepository.save(newAgent);
+          log.info("Person {} reassigned to agent {}", client.getId(), newAgent.getId());
+        }
+      }
     }
 
     client.setUpdatedAt(Instant.now());

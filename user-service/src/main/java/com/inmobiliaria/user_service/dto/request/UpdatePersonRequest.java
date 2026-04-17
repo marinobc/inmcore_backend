@@ -1,4 +1,3 @@
-// REEMPLAZAR el archivo completo:
 package com.inmobiliaria.user_service.dto.request;
 
 import java.time.LocalDate;
@@ -17,7 +16,7 @@ public record UpdatePersonRequest(
     List<String> propertyIds,
     String preferredContactMethod,
     String budget,
-    // Campos nuevos
     String preferredZone,
     String preferredPropertyType,
-    Integer preferredRooms) {}
+    Integer preferredRooms,
+    String assignedAgentId) {}

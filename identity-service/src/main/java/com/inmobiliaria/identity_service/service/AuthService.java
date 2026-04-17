@@ -18,6 +18,8 @@ import com.inmobiliaria.identity_service.dto.request.LoginRequest;
 import com.inmobiliaria.identity_service.dto.request.ResendTempPasswordRequest;
 import com.inmobiliaria.identity_service.dto.response.AuthResponse;
 import com.inmobiliaria.identity_service.exception.EmailSendException;
+import com.inmobiliaria.identity_service.exception.InvalidCredentialsException;
+import com.inmobiliaria.identity_service.exception.ResourceNotFoundException;
 import com.inmobiliaria.identity_service.exception.TemporaryPasswordExpiredException;
 import com.inmobiliaria.identity_service.exception.UnauthorizedException;
 import com.inmobiliaria.identity_service.security.Auditable;
@@ -42,7 +44,12 @@ public class AuthService {
   @Auditable(action = "USER_LOGIN", description = "User logged in")
   public AuthResponse login(LoginRequest request) {
     log.debug("Login attempt for email: {}", request.email());
-    UserDocument user = userService.findByEmailNormalized(request.email().trim().toLowerCase());
+    UserDocument user;
+    try {
+      user = userService.findByEmailNormalized(request.email().trim().toLowerCase());
+    } catch (ResourceNotFoundException e) {
+      throw new InvalidCredentialsException("Invalid credentials");
+    }
     log.debug("User found: ID={}, Status={}", user.getId(), user.getStatus());
 
     if (user.getStatus() != UserStatus.ACTIVE) {
@@ -52,7 +59,7 @@ public class AuthService {
 
     if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
       log.warn("Login failed: invalid password for user {}", user.getId());
-      throw new UnauthorizedException("Invalid credentials");
+      throw new InvalidCredentialsException("Invalid credentials");
     }
 
     if (Boolean.TRUE.equals(user.getTemporaryPassword())

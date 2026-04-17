@@ -37,6 +37,12 @@ public interface PersonRepository extends MongoRepository<PersonDocument, String
       "{ 'authUserId': ?0, '_class': { $in: ['employee', 'com.inmobiliaria.user_service.domain.EmployeeDocument'] } }")
   Optional<EmployeeDocument> findEmployeeByAuthUserId(String authUserId);
 
+  @Query("{ 'assignedClientIds': ?0 }")
+  List<EmployeeDocument> findByAssignedClientId(String clientId);
+
+  @Query("{ 'assignedOwnerIds': ?0 }")
+  List<EmployeeDocument> findByAssignedOwnerId(String ownerId);
+
   // Obtiene clientes inactivos después de una fecha límite
   @Query(
       "{ '_class': { $in: ['interested_client', 'com.inmobiliaria.user_service.domain.InterestedClientDocument'] }, "

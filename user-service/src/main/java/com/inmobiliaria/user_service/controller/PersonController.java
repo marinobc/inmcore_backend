@@ -5,7 +5,16 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.inmobiliaria.user_service.dto.request.CreateEmployeeRequest;
 import com.inmobiliaria.user_service.dto.request.CreateInterestedClientRequest;
@@ -15,7 +24,11 @@ import com.inmobiliaria.user_service.dto.request.UpdatePersonRequest;
 import com.inmobiliaria.user_service.dto.response.ApiResponse;
 import com.inmobiliaria.user_service.dto.response.PersonResponse;
 import com.inmobiliaria.user_service.dto.response.ResponseFactory;
-import com.inmobiliaria.user_service.service.*;
+import com.inmobiliaria.user_service.service.AdminProfileService;
+import com.inmobiliaria.user_service.service.EmployeeProfileService;
+import com.inmobiliaria.user_service.service.InterestedClientProfileService;
+import com.inmobiliaria.user_service.service.OwnerProfileService;
+import com.inmobiliaria.user_service.service.PersonService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -139,6 +152,24 @@ public class PersonController {
     }
     List<PersonResponse> data = personService.getClientsForAgent(agentId);
     return ResponseEntity.ok(responseFactory.success("Clients retrieved successfully", data));
+  }
+
+  // Obtener TODOS los clientes relacionados al agente (asignados, creados, citas, etc.)
+  @GetMapping("/agents/{agentId}/clients/all")
+  public ResponseEntity<ApiResponse<List<PersonResponse>>> getAllRelatedClients(
+      @PathVariable String agentId) {
+    List<PersonResponse> data = personService.getRelatedClientsForAgent(agentId);
+    return ResponseEntity.ok(
+        responseFactory.success("All related clients retrieved successfully", data));
+  }
+
+  // Obtener TODOS los propietarios relacionados al agente (por inmuebles, citas, etc.)
+  @GetMapping("/agents/{agentId}/owners")
+  public ResponseEntity<ApiResponse<List<PersonResponse>>> getRelatedOwners(
+      @PathVariable String agentId) {
+    List<PersonResponse> data = personService.getRelatedOwnersForAgent(agentId);
+    return ResponseEntity.ok(
+        responseFactory.success("Related owners retrieved successfully", data));
   }
 
   // Crear un cliente y asignarlo al agente autenticado

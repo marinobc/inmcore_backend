@@ -1,18 +1,9 @@
 {
-    "java.configuration.updateBuildConfiguration": "automatic",
-
-    // Use Google Java Format as the formatter
-    "java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
-    "java.format.settings.profile": "GoogleStyle",
-
-    // Format on save
-    "editor.formatOnSave": true,
-
-    "editor.codeActionsOnSave": {
-        "source.organizeImports": "explicit"
-    },
-
-    // Enable Checkstyle real-time linting (requires Checkstyle for Java extension)
-    "java.checkstyle.configuration": "${workspaceFolder}/google_checks.xml",
-    "java.checkstyle.version": "10.12.5"
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "editor.formatOnSave": false,
+  "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#720f0f",
+    "titleBar.inactiveBackground": "#720f0f"
+  },
+  "java.compile.nullAnalysis.mode": "disabled"
 }

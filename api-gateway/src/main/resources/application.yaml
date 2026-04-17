@@ -73,3 +73,22 @@ logging:
   level:
     root: ERROR
     "[com.inmobiliaria.api_gateway]": DEBUG
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: 1. Identity Service
+        url: /identity-service/v3/api-docs
+      - name: 2. User Service
+        url: /user-service/v3/api-docs
+      - name: 3. Property Service
+        url: /property-service/v3/api-docs
+      - name: 4. Access Control Service
+        url: /access-control-service/v3/api-docs
+      - name: 5. Notification Service
+        url: /notification-service/v3/api-docs
+      - name: 6. Visit Calendar Service
+        url: /visit-calendar-service/v3/api-docs
+      - name: 7. Operation Service
+        url: /operation-service/v3/api-docs

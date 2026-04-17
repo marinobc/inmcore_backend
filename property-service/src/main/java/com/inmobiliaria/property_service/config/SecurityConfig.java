@@ -25,7 +25,9 @@ public class SecurityConfig {
     http.csrf(csrf -> csrf.disable()) // Desactivar CSRF para microservicios stateless
         .authorizeHttpRequests(
             auth ->
-                auth.anyRequest()
+                auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                    .permitAll()
+                    .anyRequest()
                     .authenticated() // Todas las rutas requieren estar autenticado vía Gateway
             )
         // Añadimos nuestro filtro personalizado antes del filtro de autenticación estándar
